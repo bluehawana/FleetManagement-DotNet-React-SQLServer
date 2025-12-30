@@ -1,0 +1,73 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.log
+.vs/
+.vscode/
+*.DotSettings.user
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.mdf
+*.ldf
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+*.iml
+
+# Build
+dist/
+build/
+publish/
+out/
+
+# Secrets
+appsettings.Development.json
+*.env
+secrets.json
+connection-strings.json
+*.pfx
+*.key
+
+# Data files (large datasets)
+database/data/kaggle/*.csv
+database/data/kaggle/*.json
+database/data/kaggle/*.xlsx
+database/data/kaggle/*.zip
+
+# Docker
+docker-compose.override.yml
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coverage
+
+# Logs
+logs/
+*.log
