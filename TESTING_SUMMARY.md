@@ -71,7 +71,15 @@ FleetManagement.Tests/
 
 ## Test Results
 
-### API Integration Tests
+### Unit Test Run - December 31, 2024 (16:27 CET)
+```
+dotnet test
+Passed!  - Failed: 0, Passed: 15, Skipped: 0, Total: 15, Duration: 16 ms
+```
+
+**✅ All 15 Tests Passed Successfully!**
+
+### API Integration Tests (Manual)
 - ✅ POST /api/seed/mock-data - **PASS** (2.5s, 22,093 entities)
 - ✅ GET /api/dashboard/kpis - **PASS** (~100ms)
 - ✅ GET /api/dashboard/fleet-status - **PASS** (~50ms)
