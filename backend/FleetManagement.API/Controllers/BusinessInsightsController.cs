@@ -149,7 +149,7 @@ public class BusinessInsightsController : ControllerBase
 
         var totalWasted = wastefulTrips.Sum(r => r.WastedCost);
         var annualizedWaste = totalWasted * (365m / days);
-        var potentialRevenue = overcrowdedTrips.Sum(r => (r.OccupancyPercent - 85) * 2.5m); // $2.50 per lost passenger
+        var potentialRevenue = overcrowdedTrips.Sum(r => ((decimal)r.OccupancyPercent - 85) * 2.5m); // $2.50 per lost passenger
 
         var analysis = new EmptyBusAnalysis
         {
@@ -159,7 +159,7 @@ public class BusinessInsightsController : ControllerBase
                 RouteNumber = r.RouteNumber,
                 TimeSlot = r.TimeSlot,
                 AveragePassengers = (int)r.AvgPassengers,
-                OccupancyPercent = r.OccupancyPercent,
+                OccupancyPercent = (decimal)r.OccupancyPercent,
                 TripsPerPeriod = r.TripCount,
                 WastedCost = r.WastedCost,
                 Recommendation = r.Recommendation,
@@ -170,8 +170,8 @@ public class BusinessInsightsController : ControllerBase
                 RouteNumber = r.RouteNumber,
                 TimeSlot = r.TimeSlot,
                 AveragePassengers = (int)r.AvgPassengers,
-                OccupancyPercent = r.OccupancyPercent,
-                LostRevenueEstimate = (r.OccupancyPercent - 85) * 2.5m * r.TripCount,
+                OccupancyPercent = (decimal)r.OccupancyPercent,
+                LostRevenueEstimate = ((decimal)r.OccupancyPercent - 85) * 2.5m * r.TripCount,
                 Recommendation = "Add bus to capture more passengers"
             }).ToList(),
             TotalWastedThisPeriod = totalWasted,

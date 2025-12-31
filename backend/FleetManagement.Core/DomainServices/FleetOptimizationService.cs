@@ -50,7 +50,7 @@ public class FleetOptimizationService
         return Result.Success(suitableBus);
     }
     
-    public IEnumerable<Bus> IdentifyInefficient Buses(
+    public IEnumerable<Bus> IdentifyInefficientBuses(
         IEnumerable<Bus> buses,
         IEnumerable<DailyOperation> operations,
         decimal minAcceptableMpg)

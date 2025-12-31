@@ -27,11 +27,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add DbContext
+// Add DbContext - Use In-Memory for testing
 builder.Services.AddDbContext<FleetDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("FleetManagement.Infrastructure")));
+{
+    // Use In-Memory database for testing (no SQL Server needed)
+    options.UseInMemoryDatabase("FleetManagementDB");
+
+    // Uncomment below to use SQL Server instead:
+    // options.UseSqlServer(
+    //     builder.Configuration.GetConnectionString("DefaultConnection"),
+    //     b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
+});
 
 // Add Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -33,7 +33,7 @@ public class BusRepository : IBusRepository
     {
         return await _context.Buses
             .Include(b => b.MaintenanceRecords)
-            .OrderBy(b => b.BusNumber)
+            .OrderBy(b => b.BusNumber.Value)
             .ToListAsync(cancellationToken);
     }
 

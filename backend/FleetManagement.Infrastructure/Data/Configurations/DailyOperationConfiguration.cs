@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using FleetManagement.Core.Aggregates.OperationAggregate;
+using FleetManagement.Core.Aggregates.BusAggregate;
+using FleetManagement.Core.Aggregates.RouteAggregate;
 
 namespace FleetManagement.Infrastructure.Data.Configurations;
 
@@ -92,9 +94,6 @@ public class DailyOperationConfiguration : IEntityTypeConfiguration<DailyOperati
             .WithMany()
             .HasForeignKey(o => o.RouteId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        // Ignore calculated properties
-        builder.Ignore(o => o.FuelEfficiency);
 
         // Ignore domain events
         builder.Ignore(o => o.DomainEvents);
