@@ -1,0 +1,28 @@
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    FLEET MANAGEMENT COST OPTIMIZATION                        │
+│                        Analysis Period: 2015-2023                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  🔴 CHALLENGE: RISING FUEL COSTS                                            │
+│     • Diesel price increased 85% ($2.71 → $5.00)          │
+│     • Peak price: $5.75 (June 2022)                                         │
+│     • Fuel now ~36% of passenger fare at current prices                   │
+│                                                                              │
+│  🟡 CHALLENGE: REDUCED RIDERSHIP                                            │
+│     • COVID impact: -55% ridership (April 2020)                            │
+│     • Current recovery: 62% of pre-COVID levels                        │
+│     • Efficiency declining: 4x increase in cost per passenger              │
+│                                                                              │
+│  🟢 OPTIMIZATION OPPORTUNITIES                                              │
+│     • Best operating months: October (highest ridership)                   │
+│     • Lowest fuel costs: December-February                                 │
+│     • Seasonal scheduling can save 15-20% on fuel                          │
+│                                                                              │
+│  📋 RECOMMENDATIONS                                                         │
+│     1. Reduce frequency during low-ridership months (Jul-Aug)              │
+│     2. Use fuel hedging for Q2-Q3 (historically high prices)               │
+│     3. Optimize routes to reduce miles per passenger                       │
+│     4. Consider hybrid/electric fleet for long-term savings                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘

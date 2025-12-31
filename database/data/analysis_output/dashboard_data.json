@@ -1,0 +1,32 @@
+{
+  "fuel_metrics": {
+    "diesel_2015_avg": 2.71,
+    "diesel_2022_avg": 5.0,
+    "diesel_increase_pct": 84.7,
+    "diesel_peak": 5.75,
+    "diesel_current": 4.41
+  },
+  "ridership_metrics": {
+    "pre_covid_avg_millions": 396.0,
+    "covid_low_millions": 111.0,
+    "latest_millions": 246.0,
+    "recovery_pct": 62.1
+  },
+  "optimization": {
+    "best_quarter": "Q2",
+    "worst_quarter": "Q1",
+    "best_month": "October",
+    "worst_month": "July",
+    "low_fuel_months": [
+      "December",
+      "January",
+      "February"
+    ]
+  },
+  "recommendations": [
+    "Reduce frequency during low-ridership months (Jul-Aug)",
+    "Use fuel hedging for Q2-Q3 (historically high prices)",
+    "Optimize routes to reduce miles per passenger",
+    "Consider hybrid/electric fleet for long-term savings"
+  ]
+}
