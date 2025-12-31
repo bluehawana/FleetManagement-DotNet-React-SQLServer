@@ -64,6 +64,9 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.next/
+*.tsbuildinfo
+next-env.d.ts
 
 # Database
 *.mdf
