@@ -2,242 +2,304 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import Image from 'next/image';
+import {
+  TrendingUp,
+  TrendingDown,
+  Fuel,
+  Users,
+  DollarSign,
+  Calendar,
+  BarChart3,
+  PieChart,
+  ArrowRight
+} from 'lucide-react';
 
-function Panel({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
-    return (
-        <div className={`bg-[#181b1f] rounded-lg border border-white/5 overflow-hidden ${className}`}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#111318]">
-                <h3 className="text-sm font-medium text-white">{title}</h3>
-            </div>
-            <div className="p-4">{children}</div>
+function MetricCard({ title, value, change, changeLabel, isPositive, icon: Icon }: any) {
+  return (
+    <div className="stat-card">
+      <div className="stat-header">
+        <div className="stat-icon blue">
+          <Icon size={20} />
         </div>
-    );
+        {change && (
+          <div className={`stat-trend ${isPositive ? 'up' : 'down'}`}>
+            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {change}
+          </div>
+        )}
+      </div>
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{title}</div>
+      {changeLabel && <p className="text-xs text-[var(--foreground-muted)] mt-1">{changeLabel}</p>}
+    </div>
+  );
 }
 
-function MetricCard({
-    title,
-    value,
-    change,
-    description
-}: {
-    title: string;
-    value: string;
-    change?: { value: string; positive: boolean };
-    description: string;
-}) {
-    return (
-        <div className="bg-[#1a1d21] rounded-lg border border-white/5 p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wider">{title}</p>
-            <div className="flex items-end gap-2 mt-1">
-                <p className="text-2xl font-bold text-white">{value}</p>
-                {change && (
-                    <span className={`text-xs mb-1 ${change.positive ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {change.positive ? '↑' : '↓'} {change.value}
-                    </span>
-                )}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">{description}</p>
+function ChartPlaceholder({ title, description, icon: Icon }: { title: string; description: string; icon: any }) {
+  return (
+    <div className="h-48 bg-gradient-to-br from-[var(--background-secondary)] to-[var(--background-tertiary)] rounded-lg flex items-center justify-center">
+      <div className="text-center">
+        <Icon size={32} className="mx-auto text-[var(--foreground-muted)] mb-2" />
+        <p className="text-sm text-[var(--foreground-muted)]">{title}</p>
+        <p className="text-xs text-[var(--foreground-muted)] mt-1">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({ icon, title, description, savings, color }: any) {
+  const colorClasses: Record<string, string> = {
+    blue: 'bg-[var(--info-light)] border-blue-200',
+    amber: 'bg-[var(--warning-light)] border-amber-200',
+    purple: 'bg-purple-50 border-purple-200',
+    green: 'bg-[var(--success-light)] border-green-200',
+  };
+
+  return (
+    <div className={`p-4 rounded-lg border ${colorClasses[color]}`}>
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{icon}</span>
+        <div className="flex-1">
+          <h4 className="text-sm font-semibold text-[var(--foreground)]">{title}</h4>
+          <p className="text-xs text-[var(--foreground-muted)] mt-1">{description}</p>
+          {savings && (
+            <p className="text-sm font-semibold text-[var(--primary)] mt-2">{savings}</p>
+          )}
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
 export default function AnalyticsPage() {
-    const { data: kpis } = useQuery({
-        queryKey: ['kpis'],
-        queryFn: async () => {
-            const response = await api.dashboard.kpis();
-            return response.data;
-        },
-    });
+  const { data: kpis } = useQuery({
+    queryKey: ['kpis'],
+    queryFn: async () => (await api.dashboard.kpis()).data,
+  });
 
-    const { data: roiSummary } = useQuery({
-        queryKey: ['roi-summary'],
-        queryFn: async () => {
-            const response = await api.insights.roiSummary(30);
-            return response.data;
-        },
-    });
+  const { data: roiSummary } = useQuery({
+    queryKey: ['roi-summary'],
+    queryFn: async () => (await api.insights.roiSummary(30)).data,
+  });
 
-    return (
-        <div className="space-y-6">
-            {/* Header with Time Range Selector */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-semibold text-white">Data Visualization Center</h2>
-                    <p className="text-sm text-slate-500">US DOT Data Analysis (2015-2023)</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button className="px-3 py-1.5 text-xs bg-orange-500/20 text-orange-400 rounded-lg border border-orange-500/30">
-                        Last 30 Days
-                    </button>
-                    <button className="px-3 py-1.5 text-xs bg-white/5 text-slate-400 rounded-lg border border-white/10 hover:border-orange-500/30 transition-all">
-                        Last 90 Days
-                    </button>
-                    <button className="px-3 py-1.5 text-xs bg-white/5 text-slate-400 rounded-lg border border-white/10 hover:border-orange-500/30 transition-all">
-                        This Year
-                    </button>
-                    <button className="px-3 py-1.5 text-xs bg-white/5 text-slate-400 rounded-lg border border-white/10 hover:border-orange-500/30 transition-all">
-                        Custom
-                    </button>
-                </div>
-            </div>
+  const { data: dotInsights } = useQuery({
+    queryKey: ['us-dot-insights'],
+    queryFn: async () => (await api.analytics.usDotInsights()).data,
+  });
 
-            {/* Key Insights from US DOT */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard
-                    title="Diesel Price Change"
-                    value="+85%"
-                    change={{ value: "since 2015", positive: false }}
-                    description="$2.71 → $5.00/gallon"
-                />
-                <MetricCard
-                    title="Ridership Recovery"
-                    value="62%"
-                    change={{ value: "vs pre-COVID", positive: true }}
-                    description="406M → 246M monthly"
-                />
-                <MetricCard
-                    title="Cost Per Passenger"
-                    value="+235%"
-                    change={{ value: "efficiency drop", positive: false }}
-                    description="$0.028 → $0.094"
-                />
-                <MetricCard
-                    title="Peak Month"
-                    value="October"
-                    description="Highest ridership month"
-                />
-            </div>
-
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Fuel Cost Trends */}
-                <Panel title="Fuel Cost Trends (2015-2023)">
-                    <div className="aspect-video bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-                        <div className="text-center">
-                            <span className="text-4xl">📈</span>
-                            <p className="text-sm text-slate-400 mt-2">Diesel +85% | Peak: $5.75 (Jun 2022)</p>
-                            <p className="text-xs text-slate-500">Based on US DOT Transportation Statistics</p>
-                        </div>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p className="text-lg font-bold text-white">$2.71</p>
-                            <p className="text-xs text-slate-500">2015 Avg</p>
-                        </div>
-                        <div>
-                            <p className="text-lg font-bold text-red-400">$5.75</p>
-                            <p className="text-xs text-slate-500">2022 Peak</p>
-                        </div>
-                        <div>
-                            <p className="text-lg font-bold text-amber-400">$4.41</p>
-                            <p className="text-xs text-slate-500">Current</p>
-                        </div>
-                    </div>
-                </Panel>
-
-                {/* Ridership Patterns */}
-                <Panel title="Ridership Patterns">
-                    <div className="aspect-video bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-                        <div className="text-center">
-                            <span className="text-4xl">👥</span>
-                            <p className="text-sm text-slate-400 mt-2">COVID Impact: -72% | Recovery: 62%</p>
-                            <p className="text-xs text-slate-500">Monthly transit ridership trends</p>
-                        </div>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p className="text-lg font-bold text-white">406M</p>
-                            <p className="text-xs text-slate-500">Pre-COVID</p>
-                        </div>
-                        <div>
-                            <p className="text-lg font-bold text-red-400">111M</p>
-                            <p className="text-xs text-slate-500">COVID Low</p>
-                        </div>
-                        <div>
-                            <p className="text-lg font-bold text-emerald-400">246M</p>
-                            <p className="text-xs text-slate-500">Current</p>
-                        </div>
-                    </div>
-                </Panel>
-
-                {/* Cost Efficiency */}
-                <Panel title="Cost Efficiency Analysis">
-                    <div className="aspect-video bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-                        <div className="text-center">
-                            <span className="text-4xl">💰</span>
-                            <p className="text-sm text-slate-400 mt-2">Cost per passenger increased 3.4x</p>
-                            <p className="text-xs text-slate-500">Efficiency trending down since 2020</p>
-                        </div>
-                    </div>
-                    <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-xs text-red-400 font-medium">⚠️ ALERT: Efficiency Crisis</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                            Each passenger now costs 235% more to serve than in 2015
-                        </p>
-                    </div>
-                </Panel>
-
-                {/* Schedule Optimization */}
-                <Panel title="Schedule Optimization">
-                    <div className="aspect-video bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-                        <div className="text-center">
-                            <span className="text-4xl">📅</span>
-                            <p className="text-sm text-slate-400 mt-2">Best: October | Worst: July-August</p>
-                            <p className="text-xs text-slate-500">Seasonal optimization opportunities</p>
-                        </div>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                            <p className="text-xs text-slate-400">Low Fuel Cost Months</p>
-                            <p className="text-sm font-medium text-emerald-400">Dec, Jan, Feb</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                            <p className="text-xs text-slate-400">High Fuel Cost Months</p>
-                            <p className="text-sm font-medium text-amber-400">May, Jun, Jul</p>
-                        </div>
-                    </div>
-                </Panel>
-            </div>
-
-            {/* Recommendations Panel */}
-            <Panel title="AI-Powered Recommendations (Based on US DOT Analysis)">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3">
-                            <span className="text-xl">📅</span>
-                        </div>
-                        <p className="font-medium text-white text-sm">Seasonal Scheduling</p>
-                        <p className="text-xs text-slate-400 mt-1">Reduce service Jul-Aug (lowest ridership)</p>
-                        <p className="text-xs text-emerald-400 mt-2">Save 15-20% on fuel</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20">
-                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-3">
-                            <span className="text-xl">⛽</span>
-                        </div>
-                        <p className="font-medium text-white text-sm">Fuel Hedging</p>
-                        <p className="text-xs text-slate-400 mt-1">Lock prices for Q2-Q3 (expensive)</p>
-                        <p className="text-xs text-emerald-400 mt-2">Save $45K/year</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20">
-                        <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
-                            <span className="text-xl">🚌</span>
-                        </div>
-                        <p className="font-medium text-white text-sm">Route Optimization</p>
-                        <p className="text-xs text-slate-400 mt-1">Focus on high-ridership corridors</p>
-                        <p className="text-xs text-emerald-400 mt-2">+12% efficiency</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center mb-3">
-                            <span className="text-xl">🔋</span>
-                        </div>
-                        <p className="font-medium text-white text-sm">Electrification</p>
-                        <p className="text-xs text-slate-400 mt-1">Hedge against diesel volatility</p>
-                        <p className="text-xs text-emerald-400 mt-2">Long-term savings</p>
-                    </div>
-                </div>
-            </Panel>
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">Analytics</h1>
+          <p className="text-sm text-[var(--foreground-muted)] mt-1">
+            Performance insights and industry benchmarks
+          </p>
         </div>
-    );
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost btn-sm">Last 7 Days</button>
+          <button className="btn btn-secondary btn-sm">Last 30 Days</button>
+          <button className="btn btn-ghost btn-sm">Last 90 Days</button>
+          <button className="btn btn-ghost btn-sm">Custom</button>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid-cols-4">
+        <MetricCard
+          title="Diesel Price Change"
+          value="+85%"
+          change="since 2015"
+          isPositive={false}
+          icon={Fuel}
+        />
+        <MetricCard
+          title="Ridership Recovery"
+          value="62%"
+          change="vs pre-COVID"
+          isPositive={true}
+          icon={Users}
+        />
+        <MetricCard
+          title="Cost Per Passenger"
+          value="+235%"
+          change="efficiency drop"
+          isPositive={false}
+          icon={DollarSign}
+        />
+        <MetricCard
+          title="Peak Month"
+          value="October"
+          changeLabel="Highest ridership"
+          icon={Calendar}
+        />
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-2 gap-6">
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Fuel Cost Trends</h3>
+              <p className="card-description">2015-2023 diesel price analysis</p>
+            </div>
+          </div>
+          <div className="card-body">
+            <ChartPlaceholder 
+              title="Diesel +85%" 
+              description="Peak: $5.75 (Jun 2022)" 
+              icon={BarChart3}
+            />
+            <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-[var(--background-secondary)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--foreground)]">$2.71</p>
+                <p className="text-xs text-[var(--foreground-muted)]">2015 Avg</p>
+              </div>
+              <div className="p-3 bg-[var(--danger-light)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--danger)]">$5.75</p>
+                <p className="text-xs text-[var(--foreground-muted)]">2022 Peak</p>
+              </div>
+              <div className="p-3 bg-[var(--warning-light)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--warning)]">$4.41</p>
+                <p className="text-xs text-[var(--foreground-muted)]">Current</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Ridership Patterns</h3>
+              <p className="card-description">Monthly transit ridership trends</p>
+            </div>
+          </div>
+          <div className="card-body">
+            <ChartPlaceholder 
+              title="COVID Impact: -72%" 
+              description="Recovery: 62%" 
+              icon={PieChart}
+            />
+            <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-[var(--background-secondary)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--foreground)]">406M</p>
+                <p className="text-xs text-[var(--foreground-muted)]">Pre-COVID</p>
+              </div>
+              <div className="p-3 bg-[var(--danger-light)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--danger)]">111M</p>
+                <p className="text-xs text-[var(--foreground-muted)]">COVID Low</p>
+              </div>
+              <div className="p-3 bg-[var(--success-light)] rounded-lg">
+                <p className="text-lg font-bold text-[var(--success)]">246M</p>
+                <p className="text-xs text-[var(--foreground-muted)]">Current</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ROI Summary */}
+      {roiSummary && (
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Cost Savings Potential</h3>
+              <p className="card-description">Based on your fleet data analysis</p>
+            </div>
+            <button className="btn btn-primary btn-sm">
+              View Full Report
+              <ArrowRight size={14} />
+            </button>
+          </div>
+          <div className="card-body">
+            <div className="grid grid-cols-4 gap-6">
+              <div className="col-span-1 text-center p-6 bg-[var(--primary-light)] rounded-lg">
+                <p className="text-3xl font-bold text-[var(--primary)]">
+                  ${roiSummary.totalPotentialAnnualSavings?.toLocaleString()}
+                </p>
+                <p className="text-sm text-[var(--foreground-muted)] mt-1">Annual Savings Potential</p>
+                <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+                  <div>
+                    <span className="font-semibold">{roiSummary.roiPercentage}%</span>
+                    <span className="text-[var(--foreground-muted)]"> ROI</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">{roiSummary.paybackMonths}</span>
+                    <span className="text-[var(--foreground-muted)]"> mo payback</span>
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-3 grid grid-cols-2 gap-4">
+                <div className="p-4 border border-[var(--border)] rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-[var(--foreground-secondary)]">Fuel Optimization</span>
+                    <span className="text-sm font-semibold text-[var(--primary)]">
+                      ${roiSummary.problem1_FuelWaste?.potentialAnnualSavings?.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-[var(--background-tertiary)] rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: '75%' }}></div>
+                  </div>
+                </div>
+                <div className="p-4 border border-[var(--border)] rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-[var(--foreground-secondary)]">Route Efficiency</span>
+                    <span className="text-sm font-semibold text-[var(--warning)]">
+                      ${roiSummary.problem2_EmptyBuses?.potentialAnnualSavings?.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-[var(--background-tertiary)] rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--warning)] rounded-full" style={{ width: '45%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Recommendations */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h3 className="card-title">AI-Powered Recommendations</h3>
+            <p className="card-description">Based on US DOT industry analysis</p>
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="grid grid-cols-4 gap-4">
+            <InsightCard
+              icon="📅"
+              title="Seasonal Scheduling"
+              description="Reduce service Jul-Aug (lowest ridership)"
+              savings="Save 15-20% on fuel"
+              color="blue"
+            />
+            <InsightCard
+              icon="⛽"
+              title="Fuel Hedging"
+              description="Lock prices for Q2-Q3 (expensive months)"
+              savings="Save $45K/year"
+              color="amber"
+            />
+            <InsightCard
+              icon="🚌"
+              title="Route Optimization"
+              description="Focus on high-ridership corridors"
+              savings="+12% efficiency"
+              color="purple"
+            />
+            <InsightCard
+              icon="🔋"
+              title="Electrification"
+              description="Hedge against diesel volatility"
+              savings="Long-term savings"
+              color="green"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

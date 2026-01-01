@@ -3,205 +3,290 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { useState } from 'react';
+import {
+  Wrench,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Calendar,
+  Plus,
+  Filter,
+  MoreHorizontal,
+  ChevronRight
+} from 'lucide-react';
 
-function Panel({ title, children, className = '', actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) {
-    return (
-        <div className={`bg-[#181b1f] rounded-lg border border-white/5 overflow-hidden ${className}`}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#111318]">
-                <h3 className="text-sm font-medium text-white">{title}</h3>
-                {actions}
+// US State license plate formats
+const generateLicensePlate = (index: number): string => {
+  const states = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI'];
+  const state = states[index % states.length];
+  const letters = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+  const numbers = Math.floor(1000 + Math.random() * 9000);
+  const letterPart = letters[index % letters.length] + letters[(index + 3) % letters.length] + letters[(index + 7) % letters.length];
+  return `${state} ${letterPart}-${numbers}`;
+};
+
+function MaintenanceCard({ alert, index }: { alert: any; index: number }) {
+  const licensePlate = generateLicensePlate(index);
+  const isUrgent = alert.daysUntilDue <= 3;
+  const isWarning = alert.daysUntilDue <= 7 && alert.daysUntilDue > 3;
+
+  return (
+    <div className={`card border-l-4 ${isUrgent ? 'border-l-[var(--danger)]' : isWarning ? 'border-l-[var(--warning)]' : 'border-l-[var(--info)]'}`}>
+      <div className="card-body">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+              isUrgent ? 'bg-[var(--danger-light)]' : isWarning ? 'bg-[var(--warning-light)]' : 'bg-[var(--info-light)]'
+            }`}>
+              <Wrench size={20} className={isUrgent ? 'text-[var(--danger)]' : isWarning ? 'text-[var(--warning)]' : 'text-[var(--info)]'} />
             </div>
-            <div className="p-4">{children}</div>
-        </div>
-    );
-}
-
-function MaintenanceCard({ item }: { item: any }) {
-    const priorityColors: Record<string, string> = {
-        Critical: 'border-red-500 bg-red-500/10',
-        High: 'border-amber-500 bg-amber-500/10',
-        Medium: 'border-blue-500 bg-blue-500/10',
-        Low: 'border-slate-500 bg-slate-500/10',
-    };
-
-    return (
-        <div className={`rounded-lg border-l-4 p-4 ${priorityColors[item.priority] || priorityColors.Medium}`}>
-            <div className="flex items-start justify-between">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">Bus {item.busNumber}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.priority === 'Critical' ? 'bg-red-500 text-white' :
-                                item.priority === 'High' ? 'bg-amber-500 text-white' :
-                                    'bg-white/10 text-slate-400'
-                            }`}>
-                            {item.priority}
-                        </span>
-                    </div>
-                    <p className="text-sm text-slate-400 mt-1">{item.recommendation || 'Scheduled Maintenance'}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                        Due in {item.daysUntilDue} days • {item.currentMileage?.toLocaleString()} miles
-                    </p>
-                </div>
-                <button className="px-3 py-1.5 text-xs bg-orange-500/20 text-orange-400 rounded-lg border border-orange-500/30 hover:bg-orange-500/30 transition-all">
-                    Schedule
-                </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-[var(--foreground)]">Bus {alert.busNumber}</h3>
+                <span className="text-xs font-mono text-[var(--foreground-muted)]">{licensePlate}</span>
+              </div>
+              <p className="text-sm text-[var(--foreground-secondary)] mt-1">{alert.recommendation || 'Scheduled Maintenance'}</p>
+              <div className="flex items-center gap-4 mt-2 text-xs text-[var(--foreground-muted)]">
+                <span className="flex items-center gap-1">
+                  <Clock size={12} />
+                  Due in {alert.daysUntilDue} days
+                </span>
+                <span>{(alert.currentMileage || 0).toLocaleString()} miles</span>
+              </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`badge ${isUrgent ? 'badge-danger' : isWarning ? 'badge-warning' : 'badge-info'}`}>
+              {isUrgent ? 'Urgent' : isWarning ? 'Soon' : 'Scheduled'}
+            </span>
+            <button className="btn btn-secondary btn-sm">Schedule</button>
+          </div>
         </div>
-    );
+        {alert.costIfBreakdown && (
+          <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between">
+            <span className="text-xs text-[var(--foreground-muted)]">Estimated cost if breakdown</span>
+            <span className="text-sm font-semibold text-[var(--danger)]">${alert.costIfBreakdown.toLocaleString()}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function WorkshopPage() {
-    const [activeTab, setActiveTab] = useState<'queue' | 'scheduled' | 'completed'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'scheduled' | 'completed'>('queue');
 
-    const { data: maintenanceAlerts } = useQuery({
-        queryKey: ['maintenance-alerts'],
-        queryFn: async () => {
-            const response = await api.insights.maintenanceAlerts();
-            return response.data;
-        },
-    });
+  const { data: maintenanceAlerts, isLoading } = useQuery({
+    queryKey: ['maintenance-alerts'],
+    queryFn: async () => (await api.insights.maintenanceAlerts()).data,
+  });
 
-    const { data: buses } = useQuery({
-        queryKey: ['buses'],
-        queryFn: async () => {
-            const response = await api.buses.getAll();
-            return response.data;
-        },
-    });
+  const { data: buses } = useQuery({
+    queryKey: ['buses'],
+    queryFn: async () => (await api.bus.getAll()).data,
+  });
 
-    const maintenanceBuses = buses?.filter((b: any) => b.status === 'InMaintenance') || [];
+  const maintenanceBuses = buses?.filter((b: any) => b.status === 'InMaintenance') || [];
+  const urgentCount = maintenanceAlerts?.urgentAlerts?.length || 0;
+  const upcomingCount = maintenanceAlerts?.upcomingMaintenance?.length || 0;
 
+  if (isLoading) {
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-semibold text-white">Workshop</h2>
-                    <p className="text-sm text-slate-500">Maintenance & Operations Center</p>
-                </div>
-                <button className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-all">
-                    + New Work Order
-                </button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[#181b1f] rounded-lg border border-white/5 p-4">
-                    <p className="text-xs text-slate-500 uppercase">Pending</p>
-                    <p className="text-2xl font-bold text-amber-400 mt-1">{maintenanceAlerts?.urgentAlerts?.length || 0}</p>
-                </div>
-                <div className="bg-[#181b1f] rounded-lg border border-white/5 p-4">
-                    <p className="text-xs text-slate-500 uppercase">In Progress</p>
-                    <p className="text-2xl font-bold text-blue-400 mt-1">{maintenanceBuses.length}</p>
-                </div>
-                <div className="bg-[#181b1f] rounded-lg border border-white/5 p-4">
-                    <p className="text-xs text-slate-500 uppercase">Completed Today</p>
-                    <p className="text-2xl font-bold text-emerald-400 mt-1">3</p>
-                </div>
-                <div className="bg-[#181b1f] rounded-lg border border-white/5 p-4">
-                    <p className="text-xs text-slate-500 uppercase">Parts Needed</p>
-                    <p className="text-2xl font-bold text-red-400 mt-1">5</p>
-                </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-2 border-b border-white/5 pb-4">
-                {(['queue', 'scheduled', 'completed'] as const).map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab
-                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            }`}
-                    >
-                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
-                ))}
-            </div>
-
-            {/* Maintenance Queue */}
-            {activeTab === 'queue' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Panel title="Urgent Maintenance Queue" className="lg:col-span-2">
-                        <div className="space-y-3">
-                            {maintenanceAlerts?.urgentAlerts?.map((alert: any, idx: number) => (
-                                <MaintenanceCard key={idx} item={{ ...alert, priority: alert.daysUntilDue <= 3 ? 'Critical' : 'High' }} />
-                            ))}
-                            {(!maintenanceAlerts?.urgentAlerts || maintenanceAlerts.urgentAlerts.length === 0) && (
-                                <div className="text-center py-8 text-slate-500">
-                                    <span className="text-3xl">✓</span>
-                                    <p className="text-sm mt-2">No urgent maintenance needed</p>
-                                </div>
-                            )}
-                        </div>
-                    </Panel>
-
-                    <Panel title="Preventive Maintenance Schedule">
-                        <div className="space-y-3">
-                            {maintenanceAlerts?.upcomingMaintenance?.slice(0, 5).map((item: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                                    <div>
-                                        <p className="text-sm text-white">Bus {item.busNumber}</p>
-                                        <p className="text-xs text-slate-500">{item.maintenanceType}</p>
-                                    </div>
-                                    <span className="text-xs text-slate-400">{item.daysUntilDue} days</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Panel>
-
-                    <Panel title="Currently In Workshop">
-                        <div className="space-y-3">
-                            {maintenanceBuses.map((bus: any) => (
-                                <div key={bus.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                                        <div>
-                                            <p className="text-sm text-white">Bus {bus.busNumber}</p>
-                                            <p className="text-xs text-slate-500">Oil Change + Inspection</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">In Progress</span>
-                                </div>
-                            ))}
-                            {maintenanceBuses.length === 0 && (
-                                <p className="text-center text-sm text-slate-500 py-4">No vehicles in workshop</p>
-                            )}
-                        </div>
-                    </Panel>
-                </div>
-            )}
-
-            {activeTab === 'scheduled' && (
-                <Panel title="Scheduled Maintenance">
-                    <div className="text-center py-8 text-slate-500">
-                        <span className="text-3xl">📅</span>
-                        <p className="text-sm mt-2">Calendar view coming soon</p>
-                    </div>
-                </Panel>
-            )}
-
-            {activeTab === 'completed' && (
-                <Panel title="Completed Work Orders">
-                    <div className="space-y-3">
-                        {[1, 2, 3].map((_, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                                        <span className="text-emerald-400">✓</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-white">Bus {5 + idx} - Oil Change</p>
-                                        <p className="text-xs text-slate-500">Completed 2 hours ago</p>
-                                    </div>
-                                </div>
-                                <span className="text-xs text-emerald-400">$245</span>
-                            </div>
-                        ))}
-                    </div>
-                </Panel>
-            )}
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm text-[var(--foreground-muted)] mt-3">Loading maintenance data...</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">Maintenance</h1>
+          <p className="text-sm text-[var(--foreground-muted)] mt-1">
+            Schedule and track vehicle maintenance
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="btn btn-secondary">
+            <Filter size={16} />
+            Filter
+          </button>
+          <button className="btn btn-primary">
+            <Plus size={16} />
+            New Work Order
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid-cols-4">
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon yellow">
+              <AlertTriangle size={20} />
+            </div>
+          </div>
+          <div className="stat-value">{urgentCount}</div>
+          <div className="stat-label">Pending</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon blue">
+              <Wrench size={20} />
+            </div>
+          </div>
+          <div className="stat-value">{maintenanceBuses.length}</div>
+          <div className="stat-label">In Progress</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon green">
+              <CheckCircle size={20} />
+            </div>
+          </div>
+          <div className="stat-value">3</div>
+          <div className="stat-label">Completed Today</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon red">
+              <Clock size={20} />
+            </div>
+          </div>
+          <div className="stat-value">{upcomingCount}</div>
+          <div className="stat-label">Upcoming</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-[var(--border)] pb-4">
+        {(['queue', 'scheduled', 'completed'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === tab
+                ? 'bg-[var(--primary-light)] text-[var(--primary)]'
+                : 'text-[var(--foreground-secondary)] hover:bg-[var(--background-tertiary)]'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'queue' && urgentCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-[var(--danger)] text-white rounded-full">
+                {urgentCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {activeTab === 'queue' && (
+        <div className="space-y-4">
+          {maintenanceAlerts?.urgentAlerts?.map((alert: any, idx: number) => (
+            <MaintenanceCard key={idx} alert={alert} index={idx} />
+          ))}
+          {(!maintenanceAlerts?.urgentAlerts || maintenanceAlerts.urgentAlerts.length === 0) && (
+            <div className="card">
+              <div className="card-body py-12 text-center">
+                <CheckCircle size={48} className="mx-auto text-[var(--success)] mb-4" />
+                <h3 className="text-lg font-semibold text-[var(--foreground)]">All caught up!</h3>
+                <p className="text-sm text-[var(--foreground-muted)] mt-1">
+                  No urgent maintenance needed
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'scheduled' && (
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Scheduled Maintenance</h3>
+              <p className="card-description">Upcoming service appointments</p>
+            </div>
+          </div>
+          <div className="card-body">
+            {maintenanceAlerts?.upcomingMaintenance?.slice(0, 5).map((item: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[var(--background-tertiary)] flex items-center justify-center">
+                    <Calendar size={18} className="text-[var(--foreground-muted)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Bus {item.busNumber}</p>
+                    <p className="text-xs text-[var(--foreground-muted)]">{item.maintenanceType}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-[var(--foreground-muted)]">In {item.daysUntilDue} days</span>
+                  <ChevronRight size={16} className="text-[var(--foreground-muted)]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'completed' && (
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Completed Work Orders</h3>
+              <p className="card-description">Recently finished maintenance</p>
+            </div>
+          </div>
+          <div className="card-body">
+            {[1, 2, 3].map((_, idx) => (
+              <div key={idx} className="flex items-center justify-between py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[var(--success-light)] flex items-center justify-center">
+                    <CheckCircle size={18} className="text-[var(--success)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Bus {5 + idx} - Oil Change</p>
+                    <p className="text-xs text-[var(--foreground-muted)]">Completed {idx + 1} hours ago</p>
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-[var(--foreground)]">$245</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Currently In Workshop */}
+      {maintenanceBuses.length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">Currently In Workshop</h3>
+              <p className="card-description">Vehicles being serviced</p>
+            </div>
+          </div>
+          <div className="card-body">
+            {maintenanceBuses.map((bus: any, idx: number) => (
+              <div key={bus.id} className="flex items-center justify-between py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[var(--info)] animate-pulse"></div>
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Bus {bus.busNumber}</p>
+                    <p className="text-xs text-[var(--foreground-muted)]">Oil Change + Inspection</p>
+                  </div>
+                </div>
+                <span className="badge badge-info">In Progress</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

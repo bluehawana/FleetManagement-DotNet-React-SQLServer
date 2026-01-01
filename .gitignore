@@ -114,3 +114,5 @@ database/data/raw/
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
+
+.fake

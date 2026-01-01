@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "Fleet Command Center - Smart Bus Management",
-  description: "Data-driven fleet management system that saves $271,600/year for 100-bus fleets",
-  keywords: "fleet management, bus tracking, cost optimization, predictive maintenance",
+  title: "FleetCommand - Smart Fleet Management",
+  description: "Modern fleet management platform for enterprise operations",
 };
 
 export default function RootLayout({
@@ -19,14 +15,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#0a0c10] text-white`}>
+    <html lang="en">
+      <body>
         <Providers>
-          <div className="flex min-h-screen">
+          <div className="app-layout">
             <Sidebar />
-            <div className="flex-1 ml-60">
+            <div className="app-main">
               <Header />
-              <main className="p-6">
+              <main className="app-content">
                 {children}
               </main>
             </div>

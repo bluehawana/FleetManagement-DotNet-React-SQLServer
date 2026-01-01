@@ -9,37 +9,54 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Transport company brand colors
+        border: "var(--border)",
+        background: {
+          DEFAULT: "var(--background)",
+          secondary: "var(--background-secondary)",
+          tertiary: "var(--background-tertiary)",
+        },
+        foreground: {
+          DEFAULT: "var(--foreground)",
+          secondary: "var(--foreground-secondary)",
+          muted: "var(--foreground-muted)",
+        },
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          DEFAULT: "var(--primary)",
+          hover: "var(--primary-hover)",
+          light: "var(--primary-light)",
         },
         success: {
-          50: '#f0fdf4',
-          500: '#22c55e',
-          700: '#15803d',
+          DEFAULT: "var(--success)",
+          light: "var(--success-light)",
         },
         warning: {
-          50: '#fffbeb',
-          500: '#f59e0b',
-          700: '#b45309',
+          DEFAULT: "var(--warning)",
+          light: "var(--warning-light)",
         },
         danger: {
-          50: '#fef2f2',
-          500: '#ef4444',
-          700: '#b91c1c',
+          DEFAULT: "var(--danger)",
+          light: "var(--danger-light)",
         },
+        info: {
+          DEFAULT: "var(--info)",
+          light: "var(--info-light)",
+        },
+      },
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        DEFAULT: "var(--radius)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        DEFAULT: "var(--shadow)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
       },
     },
   },
   plugins: [],
 };
+
 export default config;

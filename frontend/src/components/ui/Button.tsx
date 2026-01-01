@@ -1,46 +1,36 @@
-import { ReactNode } from 'react';
+import { ReactNode, ButtonHTMLAttributes } from 'react';
 
-interface ButtonProps {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'success' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  className?: string;
 }
 
-export function Button({
-  children,
-  onClick,
-  variant = 'primary',
+export function Button({ 
+  children, 
+  variant = 'primary', 
   size = 'md',
-  disabled = false,
   className = '',
+  ...props 
 }: ButtonProps) {
-  const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-    secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
-    success: 'bg-green-600 hover:bg-green-700 text-white',
+  const variantClasses = {
+    primary: 'btn-primary',
+    secondary: 'btn-secondary',
+    success: 'btn-success',
+    ghost: 'btn-ghost',
+    danger: 'bg-[var(--danger)] text-white hover:bg-red-600'
   };
 
-  const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+  const sizeClasses = {
+    sm: 'btn-sm',
+    md: '',
+    lg: 'h-10 px-6 text-sm'
   };
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`
-        rounded-lg font-medium transition-colors duration-200
-        ${variants[variant]}
-        ${sizes[size]}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-        ${className}
-      `}
+    <button 
+      className={`btn ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      {...props}
     >
       {children}
     </button>

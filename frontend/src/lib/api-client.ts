@@ -66,12 +66,27 @@ const metrics = {
   getAll: () => apiClient.get('/metrics'),
 };
 
+// Analytics APIs (US DOT Data)
+const analytics = {
+  usDotInsights: () => apiClient.get('/analytics/us-dot-insights'),
+  fuelTrends: () => apiClient.get('/analytics/fuel-trends'),
+  ridershipPatterns: () => apiClient.get('/analytics/ridership-patterns'),
+  costEfficiency: () => apiClient.get('/analytics/cost-efficiency'),
+};
+
+// Alias for backward compatibility
+const buses = {
+  getAll: () => apiClient.get('/bus'),
+};
+
 export const api = {
   dashboard,
   insights,
   bus,
+  buses,
   seed,
   metrics,
+  analytics,
 };
 
 export default apiClient;

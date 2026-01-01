@@ -2,96 +2,97 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Bus,
+  Activity,
+  Wrench,
+  BarChart3,
+  FileText,
+  Settings,
+  HelpCircle,
+  Truck
+} from 'lucide-react';
 
-const navItems = [
-    { icon: '📊', label: 'Dashboard', href: '/' },
-    { icon: '📡', label: 'Monitoring', href: '/monitoring' },
-    { icon: '🔧', label: 'Workshop', href: '/workshop' },
-    { icon: '📈', label: 'Analytics', href: '/analytics' },
-    { icon: '📋', label: 'Logs', href: '/activity-logs' },
+const mainNav = [
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: Bus, label: 'Fleet Overview', href: '/comprehensive' },
+  { icon: Activity, label: 'Live Tracking', href: '/monitoring' },
+  { icon: Wrench, label: 'Maintenance', href: '/workshop' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics' },
 ];
 
-const reportItems = [
-    { icon: '📄', label: 'Daily Report', href: '/reports/daily' },
-    { icon: '📊', label: 'Weekly Summary', href: '/reports/weekly' },
-    { icon: '📥', label: 'Export Data', href: '/reports/export' },
+const secondaryNav = [
+  { icon: FileText, label: 'Activity Logs', href: '/activity-logs' },
+  { icon: Settings, label: 'Settings', href: '/settings' },
+  { icon: HelpCircle, label: 'Help & Support', href: '/help' },
 ];
 
 export function Sidebar() {
-    const pathname = usePathname();
+  const pathname = usePathname();
 
-    return (
-        <aside className="fixed left-0 top-0 h-full w-60 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] z-50 flex flex-col">
-            {/* Logo */}
-            <div className="p-4 border-b border-[var(--border-subtle)]">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[var(--accent-blue)] flex items-center justify-center">
-                        <span className="text-white text-lg font-bold">⚡</span>
-                    </div>
-                    <div>
-                        <h1 className="font-semibold text-[var(--text-primary)] text-base">FleetCommand</h1>
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Enterprise</p>
-                    </div>
-                </div>
-            </div>
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href);
+  };
 
-            {/* Search */}
-            <div className="p-3">
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-blue)] transition-colors"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs">⌘K</span>
-                </div>
-            </div>
+  return (
+    <aside className="app-sidebar">
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-inner">
+          <div className="sidebar-logo-icon">
+            <Truck size={20} />
+          </div>
+          <span className="sidebar-logo-text">FleetCommand</span>
+          <span className="sidebar-logo-badge">Pro</span>
+        </div>
+      </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-3 overflow-y-auto">
-                <p className="px-3 py-2 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Main Menu</p>
-                <div className="space-y-1">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`nav-item ${isActive ? 'active' : ''}`}
-                            >
-                                <span className="text-base">{item.icon}</span>
-                                <span>{item.label}</span>
-                            </Link>
-                        );
-                    })}
-                </div>
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+        <div className="sidebar-section">
+          <div className="sidebar-section-title">Main Menu</div>
+          {mainNav.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${isActive(item.href) ? 'active' : ''}`}
+              >
+                <Icon className="sidebar-link-icon" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
 
-                <p className="px-3 py-2 mt-6 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Reports</p>
-                <div className="space-y-1">
-                    {reportItems.map((item) => (
-                        <Link key={item.href} href={item.href} className="nav-item">
-                            <span className="text-base">{item.icon}</span>
-                            <span>{item.label}</span>
-                        </Link>
-                    ))}
-                </div>
-            </nav>
+        <div className="sidebar-section">
+          <div className="sidebar-section-title">System</div>
+          {secondaryNav.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${isActive(item.href) ? 'active' : ''}`}
+              >
+                <Icon className="sidebar-link-icon" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
-            {/* Footer */}
-            <div className="p-3 border-t border-[var(--border-subtle)]">
-                <Link href="/settings" className="nav-item">
-                    <span className="text-base">⚙️</span>
-                    <span>Settings</span>
-                </Link>
-            </div>
-
-            {/* Status */}
-            <div className="p-3 bg-[var(--bg-primary)] border-t border-[var(--border-subtle)]">
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[var(--accent-green)] pulse"></span>
-                    <span className="text-xs text-[var(--text-muted)]">All systems operational</span>
-                </div>
-            </div>
-        </aside>
-    );
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <div className="sidebar-status">
+          <span className="sidebar-status-dot"></span>
+          <span>All systems operational</span>
+        </div>
+      </div>
+    </aside>
+  );
 }
