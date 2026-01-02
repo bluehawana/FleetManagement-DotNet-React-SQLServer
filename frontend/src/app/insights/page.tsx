@@ -123,7 +123,7 @@ export default function InsightsPage() {
                       <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded">
                         <div>
                           <span className="font-medium">Route {route.routeNumber}</span>
-                          <Badge status="danger" className="ml-2">{route.occupancyPercent.toFixed(0)}% full</Badge>
+                          <Badge variant="danger" className="ml-2">{route.occupancyPercent.toFixed(0)}% full</Badge>
                           <p className="text-sm text-gray-600 mt-1">{route.timeSlot}</p>
                         </div>
                         <div className="text-right">
@@ -165,7 +165,7 @@ export default function InsightsPage() {
                         <div key={idx} className="p-3 bg-green-50 rounded">
                           <div className="flex justify-between">
                             <span className="font-medium">{driver.driverName}</span>
-                            <Badge status="success">{driver.performanceScore.toFixed(0)}</Badge>
+                            <Badge variant="success">{driver.performanceScore.toFixed(0)}</Badge>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
                             {driver.mpg.toFixed(2)} MPG • {driver.averageDelayMinutes.toFixed(1)} min avg delay
@@ -181,7 +181,7 @@ export default function InsightsPage() {
                         <div key={idx} className="p-3 bg-red-50 rounded">
                           <div className="flex justify-between">
                             <span className="font-medium">{driver.driverName}</span>
-                            <Badge status="danger">{driver.performanceScore.toFixed(0)}</Badge>
+                            <Badge variant="danger">{driver.performanceScore.toFixed(0)}</Badge>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
                             {driver.mpg.toFixed(2)} MPG • ${driver.annualizedExcessCost?.toLocaleString()}/year waste
@@ -221,7 +221,7 @@ export default function InsightsPage() {
                       <div key={idx} className="flex items-center justify-between p-3 bg-yellow-50 rounded">
                         <div>
                           <span className="font-medium">Route {route.routeNumber}</span>
-                          <Badge status="warning" className="ml-2">{route.priority}</Badge>
+                          <Badge variant="warning" className="ml-2">{route.priority}</Badge>
                           <p className="text-sm text-gray-600 mt-1">
                             {route.averageDelayMinutes.toFixed(1)} min avg delay • {route.profitMargin.toFixed(1)}% margin
                           </p>

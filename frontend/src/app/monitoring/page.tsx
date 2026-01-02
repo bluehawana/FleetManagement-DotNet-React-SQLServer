@@ -157,6 +157,68 @@ export default function MonitoringPage() {
         </div>
       </div>
 
+      {/* Grafana Embedded Panels */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h3 className="card-title">Live Metrics Dashboard</h3>
+            <p className="card-description">Powered by Grafana • Real-time fleet analytics</p>
+          </div>
+          <a 
+            href="http://localhost:3001/d/fleet-overview/fleet-overview?orgId=1&kiosk" 
+            target="_blank"
+            className="btn btn-secondary btn-sm"
+          >
+            <Activity size={14} />
+            Open Grafana
+          </a>
+        </div>
+        <div className="card-body p-0">
+          <div className="grid grid-cols-2 gap-0 border-t border-[var(--border)]">
+            {/* Fleet Status Panel */}
+            <div className="border-r border-b border-[var(--border)]">
+              <iframe
+                src="http://localhost:3001/d-solo/fleet-overview/fleet-overview?orgId=1&panelId=1&theme=light"
+                width="100%"
+                height="200"
+                frameBorder="0"
+                className="bg-white"
+              />
+            </div>
+            {/* Passengers Panel */}
+            <div className="border-b border-[var(--border)]">
+              <iframe
+                src="http://localhost:3001/d-solo/fleet-overview/fleet-overview?orgId=1&panelId=2&theme=light"
+                width="100%"
+                height="200"
+                frameBorder="0"
+                className="bg-white"
+              />
+            </div>
+            {/* Revenue Panel */}
+            <div className="border-r border-[var(--border)]">
+              <iframe
+                src="http://localhost:3001/d-solo/fleet-overview/fleet-overview?orgId=1&panelId=3&theme=light"
+                width="100%"
+                height="200"
+                frameBorder="0"
+                className="bg-white"
+              />
+            </div>
+            {/* Fuel Efficiency Panel */}
+            <div>
+              <iframe
+                src="http://localhost:3001/d-solo/fleet-overview/fleet-overview?orgId=1&panelId=4&theme=light"
+                width="100%"
+                height="200"
+                frameBorder="0"
+                className="bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Map Placeholder */}
       <div className="card">
         <div className="card-header">

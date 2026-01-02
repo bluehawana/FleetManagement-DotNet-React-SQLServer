@@ -28,7 +28,7 @@ export function SavingsCard({
     <Card hover className="border-l-4 border-green-500">
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-gray-900">{problem}</h3>
-        <Badge status={priorityStatus[priority]}>{priority.toUpperCase()}</Badge>
+        <Badge variant={priorityStatus[priority]}>{priority.toUpperCase()}</Badge>
       </div>
       
       <div className="space-y-2">

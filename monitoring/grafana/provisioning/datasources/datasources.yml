@@ -1,16 +1,18 @@
-# Grafana datasource provisioning
 apiVersion: 1
+
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
 
 datasources:
   - name: Prometheus
     type: prometheus
+    uid: prometheus
     access: proxy
-    url: http://prometheus:9090
+    url: http://fleet-prometheus:9090
     isDefault: true
     editable: true
-
-  - name: Fleet-API
-    type: prometheus
-    access: proxy
-    url: http://host.docker.internal:5000/metrics
-    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
