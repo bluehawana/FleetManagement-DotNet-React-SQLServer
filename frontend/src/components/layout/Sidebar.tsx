@@ -11,11 +11,15 @@ import {
   FileText,
   Settings,
   HelpCircle,
-  Truck
+  Truck,
+  Gauge,
+  LineChart,
+  ExternalLink
 } from 'lucide-react';
 
 const mainNav = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: Gauge, label: 'KPI Dashboard', href: '/kpi-dashboard', badge: 'New' },
   { icon: Bus, label: 'Fleet Overview', href: '/comprehensive' },
   { icon: Activity, label: 'Live Tracking', href: '/monitoring' },
   { icon: Wrench, label: 'Maintenance', href: '/workshop' },
@@ -23,6 +27,7 @@ const mainNav = [
 ];
 
 const secondaryNav = [
+  { icon: LineChart, label: 'Grafana', href: 'http://localhost:3001', external: true },
   { icon: FileText, label: 'Activity Logs', href: '/activity-logs' },
   { icon: Settings, label: 'Settings', href: '/settings' },
   { icon: HelpCircle, label: 'Help & Support', href: '/help' },
@@ -53,7 +58,7 @@ export function Sidebar() {
       <nav className="sidebar-nav">
         <div className="sidebar-section">
           <div className="sidebar-section-title">Main Menu</div>
-          {mainNav.map((item) => {
+          {mainNav.map((item: any) => {
             const Icon = item.icon;
             return (
               <Link
@@ -63,6 +68,11 @@ export function Sidebar() {
               >
                 <Icon className="sidebar-link-icon" />
                 <span>{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--primary)] text-white">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -70,8 +80,23 @@ export function Sidebar() {
 
         <div className="sidebar-section">
           <div className="sidebar-section-title">System</div>
-          {secondaryNav.map((item) => {
+          {secondaryNav.map((item: any) => {
             const Icon = item.icon;
+            if (item.external) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sidebar-link"
+                >
+                  <Icon className="sidebar-link-icon" />
+                  <span>{item.label}</span>
+                  <ExternalLink size={12} className="ml-auto opacity-50" />
+                </a>
+              );
+            }
             return (
               <Link
                 key={item.href}
