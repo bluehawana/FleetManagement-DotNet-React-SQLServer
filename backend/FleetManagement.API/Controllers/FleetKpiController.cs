@@ -203,7 +203,12 @@ public class FleetKpiController : ControllerBase
     [Produces("text/plain")]
     public async Task<IActionResult> GetPrometheusKpis()
     {
-        var kpis = (await GetFleetKpis()).Value!;
+        var result = await GetFleetKpis();
+        if (result.Result is not OkObjectResult okResult || okResult.Value is not FleetKpiDto kpis)
+        {
+            return StatusCode(500, "Failed to retrieve KPI data");
+        }
+
         var sb = new StringBuilder();
 
         sb.AppendLine("# Fleet Operations KPI Dashboard - Prometheus Metrics");
