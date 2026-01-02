@@ -1,4 +1,6 @@
 # Prometheus configuration for Fleet Management System
+# Scrapes both legacy metrics and new KPI metrics
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -16,9 +18,18 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Fleet Management API metrics
+  # Fleet Management API - Legacy metrics endpoint
   - job_name: 'fleet-api'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['host.docker.internal:5000']
+      - targets: ['backend:5000']
     # For Docker network, use: ['backend:5000']
+
+  # Fleet KPI Metrics - New KPI dashboard metrics
+  - job_name: 'fleet-kpi'
+    metrics_path: '/api/fleet-kpis/prometheus'
+    static_configs:
+      - targets: ['backend:5000']
+    # For Docker network, use: ['backend:5000']
+    scrape_interval: 30s  # KPIs update less frequently
+
