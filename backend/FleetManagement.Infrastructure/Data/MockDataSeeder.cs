@@ -42,7 +42,11 @@ public class MockDataSeeder
         var routes = await SeedRoutesAsync();
         Console.WriteLine($"✅ Created {routes.Count} routes");
 
-        // Seed operations (last 90 days of data)
+        // IMPORTANT: Save buses and routes first to get their IDs
+        await _context.SaveChangesAsync();
+        Console.WriteLine("✅ Saved buses and routes to database");
+
+        // Seed operations (last 90 days of data) - now buses/routes have valid IDs
         var operations = await SeedOperationsAsync(buses, routes);
         Console.WriteLine($"✅ Created {operations.Count} daily operations");
 
@@ -70,7 +74,7 @@ public class MockDataSeeder
         {
             var busNumberResult = BusNumber.Create($"BUS-{i:D3}");
             var priceResult = Money.Create(_random.Next(350000, 550000), "USD");
-            
+
             var year = DateTime.UtcNow.Year - _random.Next(0, 8); // 0-8 years old
             var purchaseDate = new DateTime(year, _random.Next(1, 13), _random.Next(1, 28));
 
@@ -87,7 +91,7 @@ public class MockDataSeeder
             if (busResult.IsSuccess)
             {
                 var bus = busResult.Value;
-                
+
                 // Set realistic mileage based on age
                 var yearsOld = DateTime.UtcNow.Year - year;
                 var mileage = yearsOld * _random.Next(15000, 25000); // 15K-25K miles/year
@@ -164,18 +168,18 @@ public class MockDataSeeder
 
         // Based on US DOT data: Average 330M passengers/month nationally
         // For small city (20 buses): ~50-80 passengers per trip average
-        
+
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
             // Each bus does 4-6 trips per day
             foreach (var bus in buses.Where(b => b.Status == BusStatus.Active))
             {
                 var tripsPerDay = _random.Next(4, 7);
-                
+
                 for (int trip = 0; trip < tripsPerDay; trip++)
                 {
                     var route = routes[_random.Next(routes.Count)];
-                    
+
                     // Trip timing
                     var departureHour = trip switch
                     {
@@ -186,17 +190,17 @@ public class MockDataSeeder
                         4 => _random.Next(17, 19), // Evening rush
                         _ => _random.Next(19, 22)  // Evening
                     };
-                    
+
                     var departureTime = new TimeSpan(departureHour, _random.Next(0, 60), 0);
                     var arrivalTime = departureTime.Add(TimeSpan.FromMinutes(route.EstimatedDuration + _random.Next(-5, 15)));
 
                     // Passenger count based on time of day and day of week
                     var isRushHour = departureHour is >= 7 and <= 9 or >= 16 and <= 18;
                     var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                    
+
                     var basePassengers = isRushHour ? 65 : 45;
                     if (isWeekend) basePassengers = (int)(basePassengers * 0.6); // 40% less on weekends
-                    
+
                     var passengerCount = Math.Min(
                         bus.Capacity,
                         basePassengers + _random.Next(-20, 20)
@@ -205,7 +209,7 @@ public class MockDataSeeder
                     // Fuel consumption based on US DOT data: 6.0 MPG average
                     var fuelEfficiency = 6.0m + (decimal)(_random.NextDouble() * 2 - 1); // 5.0-7.0 MPG
                     var fuelConsumed = route.Distance / fuelEfficiency;
-                    
+
                     // Fuel cost: $3.12/gallon average from US DOT data
                     var dieselPrice = 3.12m + (decimal)(_random.NextDouble() * 0.5 - 0.25); // $2.87-$3.37
                     var fuelCostAmount = fuelConsumed * dieselPrice;
@@ -256,15 +260,15 @@ public class MockDataSeeder
         {
             // Add 2-5 historical maintenance records per bus
             var recordCount = _random.Next(2, 6);
-            
+
             for (int i = 0; i < recordCount; i++)
             {
                 var daysAgo = _random.Next(30, 365);
                 var maintenanceDate = DateTime.UtcNow.AddDays(-daysAgo);
-                
+
                 var costAmount = _random.Next(500, 3000);
                 var costResult = Money.Create(costAmount, "USD");
-                
+
                 var recordResult = MaintenanceRecord.Create(
                     bus.BusId,
                     maintenanceDate,
@@ -283,7 +287,7 @@ public class MockDataSeeder
                     // Access private field through reflection (for seeding only)
                     var maintenanceRecordsField = typeof(Bus)
                         .GetField("_maintenanceRecords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    
+
                     if (maintenanceRecordsField != null)
                     {
                         var records = maintenanceRecordsField.GetValue(bus) as List<MaintenanceRecord>;

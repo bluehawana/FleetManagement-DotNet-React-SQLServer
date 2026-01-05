@@ -27,8 +27,8 @@ services:
       dockerfile: Dockerfile
     container_name: fleet-backend
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;Encrypt=False;
       - ASPNETCORE_URLS=http://+:5000
     ports:
       - "5000:5000"
@@ -38,6 +38,16 @@ services:
     networks:
       - fleet-network
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:5000/metrics || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Next.js Frontend
   frontend:
@@ -127,4 +137,3 @@ volumes:
 networks:
   fleet-network:
     driver: bridge
-

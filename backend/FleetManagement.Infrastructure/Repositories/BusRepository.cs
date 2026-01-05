@@ -31,19 +31,23 @@ public class BusRepository : IBusRepository
 
     public async Task<IEnumerable<Bus>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Buses
+        var buses = await _context.Buses
             .Include(b => b.MaintenanceRecords)
-            .OrderBy(b => b.BusNumber.Value)
             .ToListAsync(cancellationToken);
+
+        // Sort in memory since BusNumber.Value can't be translated by EF Core
+        return buses.OrderBy(b => b.BusNumber.Value);
     }
 
     public async Task<IEnumerable<Bus>> GetByStatusAsync(BusStatus status, CancellationToken cancellationToken = default)
     {
-        return await _context.Buses
+        var buses = await _context.Buses
             .Include(b => b.MaintenanceRecords)
             .Where(b => b.Status == status)
-            .OrderBy(b => b.BusNumber)
             .ToListAsync(cancellationToken);
+
+        // Sort in memory since BusNumber.Value can't be translated by EF Core
+        return buses.OrderBy(b => b.BusNumber.Value);
     }
 
     public async Task<IEnumerable<Bus>> GetBusesRequiringMaintenanceAsync(CancellationToken cancellationToken = default)

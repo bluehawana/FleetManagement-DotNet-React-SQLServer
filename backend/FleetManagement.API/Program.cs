@@ -27,16 +27,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add DbContext - Use In-Memory for testing
+// Add DbContext - SQL Server for production persistence
 builder.Services.AddDbContext<FleetDbContext>(options =>
 {
-    // Use In-Memory database for testing (no SQL Server needed)
-    options.UseInMemoryDatabase("FleetManagementDB");
-
-    // Uncomment below to use SQL Server instead:
-    // options.UseSqlServer(
-    //     builder.Configuration.GetConnectionString("DefaultConnection"),
-    //     b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
+    // Use SQL Server for production with persistent data
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? "Server=localhost;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;";
+    
+    options.UseSqlServer(
+        connectionString,
+        b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
 });
 
 // Add Unit of Work
@@ -55,6 +55,34 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Auto-migrate and seed database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
+    try
+    {
+        Log.Information("📊 Ensuring database is created and migrated...");
+        await context.Database.EnsureCreatedAsync();
+        
+        // Auto-seed if database is empty
+        if (!await context.Buses.AnyAsync())
+        {
+            Log.Information("🌱 Seeding database with mock data...");
+            var seeder = new MockDataSeeder(context);
+            await seeder.SeedAsync();
+            Log.Information("✅ Database seeded successfully!");
+        }
+        else
+        {
+            Log.Information("✅ Database already contains data, skipping seed.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "❌ Error during database initialization");
+    }
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -72,6 +100,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Log startup
-Log.Information("Fleet Management API starting up...");
+Log.Information("🚀 Fleet Management API is ready!");
+Log.Information("📊 Prometheus metrics available at /metrics (Custom MetricsController)");
+Log.Information("📈 Fleet KPI metrics available at /api/fleet-kpis/prometheus");
 
 app.Run();
