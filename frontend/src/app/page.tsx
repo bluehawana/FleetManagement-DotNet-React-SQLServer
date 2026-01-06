@@ -412,27 +412,64 @@ function SavingsGauge({ roiSummary }: { roiSummary: any }) {
 }
 
 export default function DashboardPage() {
-  const { data: kpis } = useQuery({
+  const { data: kpis, error: kpisError, isLoading: kpisLoading } = useQuery({
     queryKey: ['kpis'],
-    queryFn: async () => (await api.dashboard.kpis()).data,
+    queryFn: async () => {
+      console.log('Fetching KPIs from:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
+      const response = await api.dashboard.kpis();
+      console.log('KPIs response:', response.data);
+      return response.data;
+    },
     refetchInterval: 30000,
   });
 
-  const { data: fleetStatus } = useQuery({
+  const { data: fleetStatus, error: fleetError, isLoading: fleetLoading } = useQuery({
     queryKey: ['fleet-status'],
-    queryFn: async () => (await api.dashboard.fleetStatus()).data,
+    queryFn: async () => {
+      console.log('Fetching fleet status...');
+      const response = await api.dashboard.fleetStatus();
+      console.log('Fleet status response:', response.data);
+      return response.data;
+    },
     refetchInterval: 10000,
   });
 
-  const { data: roiSummary } = useQuery({
+  const { data: roiSummary, error: roiError } = useQuery({
     queryKey: ['roi-summary'],
     queryFn: async () => (await api.insights.roiSummary(30)).data,
   });
 
-  const { data: maintenanceAlerts } = useQuery({
+  const { data: maintenanceAlerts, error: maintenanceError } = useQuery({
     queryKey: ['maintenance-alerts'],
     queryFn: async () => (await api.insights.maintenanceAlerts()).data,
   });
+
+  // Show loading state
+  if (kpisLoading || fleetLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading dashboard data...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (kpisError || fleetError || roiError || maintenanceError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-lg text-red-600 mb-2">Failed to load dashboard data</div>
+          <div className="text-sm text-gray-600">
+            {kpisError && <div>KPIs Error: {kpisError.message}</div>}
+            {fleetError && <div>Fleet Error: {fleetError.message}</div>}
+            {roiError && <div>ROI Error: {roiError.message}</div>}
+            {maintenanceError && <div>Maintenance Error: {maintenanceError.message}</div>}
+          </div>
+          <div className="text-sm text-gray-500 mt-2">Make sure the backend is running</div>
+        </div>
+      </div>
+    );
+  }
 
   // Sparkline data generators
   const generateSparkline = (base: number, variance: number) => 

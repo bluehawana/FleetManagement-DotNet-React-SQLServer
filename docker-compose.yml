@@ -1,8 +1,9 @@
 services:
-  # SQL Server Database
+  # SQL Server Database (ARM64 compatible)
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: fleet-sqlserver
+    platform: linux/arm64
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=YourStrong@Passw0rd

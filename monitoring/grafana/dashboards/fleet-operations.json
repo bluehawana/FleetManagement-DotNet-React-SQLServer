@@ -50,8 +50,23 @@
                         ]
                     },
                     "unit": "currencyUSD",
-                    "decimals": 2
-                }
+                    "decimals": 2,
+                    "displayName": ""
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "fleet_cost_per_mile"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": ""
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 4,
@@ -72,11 +87,12 @@
                     "fields": "",
                     "values": false
                 },
-                "textMode": "value_and_name"
+                "textMode": "value"
             },
             "targets": [
                 {
                     "expr": "fleet_cost_per_mile",
+                    "legendFormat": "Cost",
                     "refId": "A"
                 }
             ],
@@ -185,11 +201,12 @@
                     "fields": "",
                     "values": false
                 },
-                "textMode": "value_and_name"
+                "textMode": "value"
             },
             "targets": [
                 {
                     "expr": "fleet_maintenance_cost_mtd",
+                    "legendFormat": "",
                     "refId": "A"
                 }
             ],
@@ -237,11 +254,12 @@
                     "fields": "",
                     "values": false
                 },
-                "textMode": "value_and_name"
+                "textMode": "value"
             },
             "targets": [
                 {
                     "expr": "fleet_fuel_cost_mtd",
+                    "legendFormat": "",
                     "refId": "A"
                 }
             ],
@@ -289,11 +307,12 @@
                     "fields": "",
                     "values": false
                 },
-                "textMode": "value_and_name"
+                "textMode": "value"
             },
             "targets": [
                 {
                     "expr": "fleet_eco_savings_mtd",
+                    "legendFormat": "",
                     "refId": "A"
                 }
             ],
@@ -852,7 +871,7 @@
                     "fields": "",
                     "values": false
                 },
-                "textMode": "value_and_name"
+                "textMode": "value"
             },
             "targets": [
                 {
@@ -2077,7 +2096,7 @@
     "timepicker": {},
     "timezone": "",
     "title": "🚌 Fleet Operations KPI Dashboard",
-    "uid": "fleet-kpi",
-    "version": 2,
+    "uid": "fleet-kpi-v2",
+    "version": 4,
     "weekStart": ""
 }

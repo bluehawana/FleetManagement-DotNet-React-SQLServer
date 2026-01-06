@@ -27,7 +27,7 @@ const mainNav = [
 ];
 
 const secondaryNav = [
-  { icon: LineChart, label: 'Grafana', href: 'http://localhost:3001', external: true },
+  { icon: LineChart, label: 'Grafana', href: 'http://localhost:3002', external: true },
   { icon: FileText, label: 'Activity Logs', href: '/activity-logs' },
   { icon: Settings, label: 'Settings', href: '/settings' },
   { icon: HelpCircle, label: 'Help & Support', href: '/help' },

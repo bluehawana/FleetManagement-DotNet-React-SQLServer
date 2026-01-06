@@ -2,6 +2,7 @@ using FleetManagement.Core.Aggregates.BusAggregate;
 using FleetManagement.Core.Aggregates.RouteAggregate;
 using FleetManagement.Core.Aggregates.OperationAggregate;
 using FleetManagement.Core.ValueObjects;
+using System.Reflection;
 
 namespace FleetManagement.Infrastructure.Data;
 
@@ -96,6 +97,21 @@ public class MockDataSeeder
                 var yearsOld = DateTime.UtcNow.Year - year;
                 var mileage = yearsOld * _random.Next(15000, 25000); // 15K-25K miles/year
                 bus.UpdateMileage(mileage);
+
+                // Fix maintenance dates to be realistic for current operations
+                // Use reflection to set realistic maintenance dates
+                var lastMaintenanceDate = DateTime.UtcNow.AddDays(-_random.Next(1, 90)); // Last 1-90 days
+                var nextMaintenanceDate = DateTime.UtcNow.AddDays(_random.Next(7, 120)); // Next 7-120 days
+                
+                var busType = typeof(Bus);
+                var lastMaintenanceProp = busType.GetProperty("LastMaintenanceDate");
+                var nextMaintenanceProp = busType.GetProperty("NextMaintenanceDate");
+                
+                if (lastMaintenanceProp != null && nextMaintenanceProp != null)
+                {
+                    lastMaintenanceProp.SetValue(bus, lastMaintenanceDate);
+                    nextMaintenanceProp.SetValue(bus, nextMaintenanceDate);
+                }
 
                 // Some buses in maintenance (10%)
                 if (_random.Next(100) < 10)

@@ -27,16 +27,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add DbContext - SQL Server for production persistence
+// Add DbContext - Use In-Memory for development/testing
 builder.Services.AddDbContext<FleetDbContext>(options =>
 {
-    // Use SQL Server for production with persistent data
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? "Server=localhost;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;";
+    // Use In-Memory database for development/testing
+    options.UseInMemoryDatabase("FleetManagementInMemory");
     
-    options.UseSqlServer(
-        connectionString,
-        b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
+    // Uncomment below for SQL Server production
+    // var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    //     ?? "Server=localhost;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;";
+    // options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
 });
 
 // Add Unit of Work
@@ -94,9 +94,14 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirect in development for Prometheus compatibility
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("AllowReactApp");
-app.UseAuthorization();
+// app.UseAuthorization(); // Commented out - not using authentication
 app.MapControllers();
 
 // Log startup

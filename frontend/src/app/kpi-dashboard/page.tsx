@@ -56,6 +56,9 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+// Remove /api from API_BASE since it's already included in NEXT_PUBLIC_API_URL
+const API_BASE_ROOT = API_BASE.replace('/api', '');
+
 interface FleetKpi {
     totalBuses: number;
     activeBuses: number;
@@ -717,7 +720,7 @@ export default function FleetKpiDashboard() {
     const { data: kpis, isLoading, error } = useQuery<FleetKpi>({
         queryKey: ['fleet-kpis'],
         queryFn: async () => {
-            const res = await fetch(`${API_BASE}/api/fleet-kpis`);
+            const res = await fetch(`${API_BASE_ROOT}/api/fleet-kpis`);
             if (!res.ok) throw new Error('Failed to fetch KPIs');
             return res.json();
         },
