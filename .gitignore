@@ -73,6 +73,9 @@ next-env.d.ts
 *.ldf
 *.bak
 *.sql.bak
+postgres-data/
+prometheus-data/
+grafana-data/
 
 # OS
 .DS_Store

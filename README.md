@@ -2,10 +2,13 @@
 
 > **A data-driven fleet management system that helps transport companies save $271,600/year**
 
+> **⚠️ Database Migration Notice**: This project has been migrated from SQL Server to PostgreSQL for better macOS compatibility. SQL Server on macOS (especially Apple Silicon) can have reliability issues, so PostgreSQL provides a more stable development experience.
+
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## 📋 Table of Contents

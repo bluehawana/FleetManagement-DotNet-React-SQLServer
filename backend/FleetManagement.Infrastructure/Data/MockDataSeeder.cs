@@ -1,6 +1,7 @@
 using FleetManagement.Core.Aggregates.BusAggregate;
 using FleetManagement.Core.Aggregates.RouteAggregate;
 using FleetManagement.Core.Aggregates.OperationAggregate;
+using FleetManagement.Core.Aggregates.DriverAggregate;
 using FleetManagement.Core.ValueObjects;
 using System.Reflection;
 
@@ -43,13 +44,21 @@ public class MockDataSeeder
         var routes = await SeedRoutesAsync();
         Console.WriteLine($"✅ Created {routes.Count} routes");
 
-        // IMPORTANT: Save buses and routes first to get their IDs
+        // Seed drivers (15 drivers)
+        var drivers = await SeedDriversAsync();
+        Console.WriteLine($"✅ Created {drivers.Count} drivers");
+
+        // IMPORTANT: Save buses, routes, and drivers first to get their IDs
         await _context.SaveChangesAsync();
-        Console.WriteLine("✅ Saved buses and routes to database");
+        Console.WriteLine("✅ Saved buses, routes, and drivers to database");
 
         // Seed operations (last 90 days of data) - now buses/routes have valid IDs
-        var operations = await SeedOperationsAsync(buses, routes);
+        var operations = await SeedOperationsAsync(buses, routes, drivers);
         Console.WriteLine($"✅ Created {operations.Count} daily operations");
+
+        // Seed driver shifts (last 30 days)
+        var shiftsCount = await SeedDriverShiftsAsync(drivers);
+        Console.WriteLine($"✅ Created {shiftsCount} driver shifts");
 
         // Seed maintenance records
         var maintenanceCount = await SeedMaintenanceRecordsAsync(buses);
@@ -77,7 +86,7 @@ public class MockDataSeeder
             var priceResult = Money.Create(_random.Next(350000, 550000), "USD");
 
             var year = DateTime.UtcNow.Year - _random.Next(0, 8); // 0-8 years old
-            var purchaseDate = new DateTime(year, _random.Next(1, 13), _random.Next(1, 28));
+            var purchaseDate = DateTime.SpecifyKind(new DateTime(year, _random.Next(1, 13), _random.Next(1, 28)), DateTimeKind.Utc);
 
             var busResult = Bus.Create(
                 busNumberResult.Value,
@@ -176,11 +185,11 @@ public class MockDataSeeder
         return routes;
     }
 
-    private async Task<List<DailyOperation>> SeedOperationsAsync(List<Bus> buses, List<Route> routes)
+    private async Task<List<DailyOperation>> SeedOperationsAsync(List<Bus> buses, List<Route> routes, List<Driver> drivers)
     {
         var operations = new List<DailyOperation>();
-        var startDate = DateTime.UtcNow.AddDays(-90).Date;
-        var endDate = DateTime.UtcNow.Date;
+        var startDate = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-90).Date, DateTimeKind.Utc);
+        var endDate = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
         // Based on US DOT data: Average 330M passengers/month nationally
         // For small city (20 buses): ~50-80 passengers per trip average
@@ -248,7 +257,7 @@ public class MockDataSeeder
                         fuelConsumed,
                         route.Distance,
                         delayMinutes,
-                        $"Driver-{_random.Next(1, 15):D2}",
+                        drivers[_random.Next(drivers.Count)].FullName,
                         revenueResult.Value,
                         fuelCostResult.Value,
                         null
@@ -312,6 +321,104 @@ public class MockDataSeeder
                     }
                 }
             }
+        }
+
+        return count;
+    }
+
+    private async Task<List<Driver>> SeedDriversAsync()
+    {
+        var drivers = new List<Driver>();
+
+        // Fixed list of 15 unique American driver names
+        var driverNames = new[]
+        {
+            ("James", "Thompson"),
+            ("Michael", "Anderson"),
+            ("Robert", "Martinez"),
+            ("William", "Garcia"),
+            ("David", "Wilson"),
+            ("John", "Davis"),
+            ("Richard", "Brown"),
+            ("Joseph", "Miller"),
+            ("Thomas", "Johnson"),
+            ("Christopher", "Smith"),
+            ("Daniel", "Rodriguez"),
+            ("Matthew", "Lopez"),
+            ("Joshua", "Hernandez"),
+            ("Steven", "Taylor"),
+            ("Kevin", "Jackson")
+        };
+
+        for (int i = 1; i <= 15; i++)
+        {
+            var (firstName, lastName) = driverNames[i - 1];
+            var driverNumber = $"DRV-{i:D3}";
+            var licenseNumber = $"CDL-{_random.Next(100000, 999999)}";
+            var hireDate = DateTime.UtcNow.AddDays(-_random.Next(30, 1825)); // Hired 1 month to 5 years ago
+
+            var driver = new Driver(
+                DriverId.New(),
+                driverNumber,
+                firstName,
+                lastName,
+                licenseNumber,
+                hireDate
+            );
+
+            // Set realistic fatigue levels and rest days
+            var daysSinceRest = _random.Next(0, 6); // 0-6 days since last rest
+            var lastRestDay = DateTime.SpecifyKind(DateTime.UtcNow.Date.AddDays(-daysSinceRest), DateTimeKind.Utc);
+            
+            // Use reflection to set private properties for seeding
+            var driverType = typeof(Driver);
+            var lastRestDayProp = driverType.GetProperty("LastRestDay");
+            if (lastRestDayProp != null)
+            {
+                lastRestDayProp.SetValue(driver, lastRestDay);
+            }
+
+            // Update fatigue level based on recent activity
+            driver.UpdateFatigueLevel();
+
+            drivers.Add(driver);
+        }
+
+        await _context.Drivers.AddRangeAsync(drivers);
+        return drivers;
+    }
+
+    private async Task<int> SeedDriverShiftsAsync(List<Driver> drivers)
+    {
+        var count = 0;
+        var startDate = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-30).Date, DateTimeKind.Utc);
+        var endDate = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+        foreach (var driver in drivers)
+        {
+            for (var date = startDate; date <= endDate; date = date.AddDays(1))
+            {
+                // Skip some days (rest days, weekends, etc.)
+                if (_random.Next(100) < 15) continue; // 15% chance of no shift
+
+                // Realistic shift hours: 6-12 hours per day
+                var hoursWorked = 6 + (_random.NextDouble() * 6); // 6-12 hours
+                
+                // DOT violation simulation (rare)
+                if (_random.Next(100) < 2) // 2% chance
+                {
+                    hoursWorked = 14 + (_random.NextDouble() * 2); // 14-16 hours (violation)
+                }
+
+                var tripsCompleted = (int)(hoursWorked * _random.Next(4, 8) / 8); // 4-8 trips per 8-hour shift
+                var fuelUsed = tripsCompleted * (15 + _random.NextDouble() * 10); // 15-25 gallons per trip
+
+                driver.AddShift(date, hoursWorked, tripsCompleted, fuelUsed);
+                count++;
+            }
+
+            // Update fatigue after adding all shifts
+            driver.UpdateFatigueLevel();
         }
 
         return count;

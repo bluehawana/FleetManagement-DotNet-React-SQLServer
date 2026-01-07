@@ -27,16 +27,12 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add DbContext - Use In-Memory for development/testing
+// Add DbContext - Use PostgreSQL for production
 builder.Services.AddDbContext<FleetDbContext>(options =>
 {
-    // Use In-Memory database for development/testing
-    options.UseInMemoryDatabase("FleetManagementInMemory");
-    
-    // Uncomment below for SQL Server production
-    // var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    //     ?? "Server=localhost;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;";
-    // options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? "Host=localhost;Port=5432;Database=FleetManagement;Username=fleetuser;Password=FleetPass123!;";
+    options.UseNpgsql(connectionString, b => b.MigrationsAssembly("FleetManagement.Infrastructure"));
 });
 
 // Add Unit of Work
@@ -61,9 +57,10 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
     try
     {
-        Log.Information("📊 Ensuring database is created and migrated...");
-        await context.Database.EnsureCreatedAsync();
-        
+        Log.Information("📊 Applying database migrations...");
+        await context.Database.MigrateAsync();
+        Log.Information("✅ Database migrations applied successfully!");
+
         // Auto-seed if database is empty
         if (!await context.Buses.AnyAsync())
         {

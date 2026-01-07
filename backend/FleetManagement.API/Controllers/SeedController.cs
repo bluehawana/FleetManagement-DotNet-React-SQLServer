@@ -80,6 +80,8 @@ public class SeedController : ControllerBase
         {
             _context.DailyOperations.RemoveRange(_context.DailyOperations);
             _context.MaintenanceRecords.RemoveRange(_context.MaintenanceRecords);
+            _context.DriverShifts.RemoveRange(_context.DriverShifts);
+            _context.Drivers.RemoveRange(_context.Drivers);
             _context.Buses.RemoveRange(_context.Buses);
             _context.Routes.RemoveRange(_context.Routes);
             
@@ -109,6 +111,8 @@ public class SeedController : ControllerBase
             TotalRoutes = _context.Routes.Count(),
             TotalOperations = _context.DailyOperations.Count(),
             TotalMaintenanceRecords = _context.MaintenanceRecords.Count(),
+            TotalDrivers = _context.Drivers.Count(),
+            TotalDriverShifts = _context.DriverShifts.Count(),
             OldestOperation = _context.DailyOperations.Any() 
                 ? _context.DailyOperations.Min(o => o.OperationDate) 
                 : (DateTime?)null,
@@ -137,6 +141,8 @@ public record DatabaseStats
     public int TotalRoutes { get; init; }
     public int TotalOperations { get; init; }
     public int TotalMaintenanceRecords { get; init; }
+    public int TotalDrivers { get; init; }
+    public int TotalDriverShifts { get; init; }
     public DateTime? OldestOperation { get; init; }
     public DateTime? NewestOperation { get; init; }
 }

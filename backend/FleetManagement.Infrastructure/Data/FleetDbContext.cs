@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using FleetManagement.Core.Aggregates.BusAggregate;
 using FleetManagement.Core.Aggregates.RouteAggregate;
 using FleetManagement.Core.Aggregates.OperationAggregate;
+using FleetManagement.Core.Aggregates.DriverAggregate;
 using FleetManagement.Core.Common;
 
 namespace FleetManagement.Infrastructure.Data;
@@ -19,6 +20,8 @@ public class FleetDbContext : DbContext
     public DbSet<Route> Routes { get; set; } = null!;
     public DbSet<DailyOperation> DailyOperations { get; set; } = null!;
     public DbSet<MaintenanceRecord> MaintenanceRecords { get; set; } = null!;
+    public DbSet<Driver> Drivers { get; set; } = null!;
+    public DbSet<DriverShift> DriverShifts { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

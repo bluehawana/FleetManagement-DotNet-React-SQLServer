@@ -17,7 +17,9 @@ namespace FleetManagement.API.Controllers;
 public class MetricsController : ControllerBase
 {
     private readonly FleetDbContext _context;
-    private const int SERVICE_INTERVAL_MILES = 30000; // Like scheduled maintenance window
+    private const int SERVICE_INTERVAL_MILES = 25000; // Miles between services
+    private const int SERVICE_INTERVAL_MONTHS = 6; // Months between services  
+    private const int SERVICE_INTERVAL_HOURS = 1500; // Engine hours between services
     private const int FUEL_TANK_GALLONS = 100;
     private const int DRIVER_SHIFT_HOURS = 8;
     private static readonly Random _rng = new(42); // Deterministic for demo
@@ -31,6 +33,7 @@ public class MetricsController : ControllerBase
         var sb = new StringBuilder();
         var buses = await _context.Buses.ToListAsync();
         var routes = await _context.Routes.ToListAsync();
+        var drivers = await _context.Drivers.Include(d => d.Shifts).ToListAsync();
         var today = DateTime.UtcNow.Date;
         var now = DateTime.UtcNow;
 
@@ -41,27 +44,78 @@ public class MetricsController : ControllerBase
         var todayOps = operations.Where(o => o.OperationDate.Date == today).ToList();
         var isHoliday = IsHoliday(today);
 
-        // Calculate fleet status counts
-        var running = buses.Count(b => b.Status == BusStatus.Active);
+        // Calculate maintenance and out-of-service buses first
         var maint = buses.Count(b => b.Status == BusStatus.Maintenance);
         var down = buses.Count(b => b.Status == BusStatus.OutOfService);
         var warning = buses.Count(b => GetHealthPercent(b) < 30 && b.Status == BusStatus.Active);
         var critical = buses.Count(b => GetHealthPercent(b) < 10 && b.Status == BusStatus.Active);
+
+        // Calculate realistic fleet status based on time of day and schedules
+        var currentHour = now.Hour;
+        var isWeekend = now.DayOfWeek == DayOfWeek.Saturday || now.DayOfWeek == DayOfWeek.Sunday;
+        
+        // Realistic bus scheduling:
+        // Peak hours (7-9 AM, 5-7 PM): 85-95% of fleet active
+        // Regular hours (9 AM-5 PM, 7-11 PM): 60-75% active  
+        // Off-peak (11 PM-7 AM): 10-25% active (night service)
+        // Weekend: 50-70% active during day, 5-15% at night
+        
+        double targetActiveRate;
+        if (currentHour >= 7 && currentHour <= 9 || currentHour >= 17 && currentHour <= 19) {
+            // Peak hours
+            targetActiveRate = isWeekend ? 0.65 : 0.90;
+        } else if (currentHour >= 9 && currentHour <= 17 || currentHour >= 19 && currentHour <= 23) {
+            // Regular service hours
+            targetActiveRate = isWeekend ? 0.60 : 0.70;
+        } else {
+            // Night/early morning (11 PM - 7 AM)
+            targetActiveRate = isWeekend ? 0.10 : 0.20;
+        }
+        
+        // Add some randomness for realism
+        targetActiveRate += (_rng.NextDouble() - 0.5) * 0.1; // ±5% variation
+        targetActiveRate = Math.Max(0.05, Math.Min(0.95, targetActiveRate)); // Keep within bounds
+        
+        var targetActiveBuses = (int)(buses.Count * targetActiveRate);
+        var availableBuses = buses.Count(b => b.Status != BusStatus.OutOfService);
+        
+        // Determine actual status distribution
+        var running = Math.Min(targetActiveBuses, availableBuses - maint);
+        var idle = availableBuses - running - maint; // Buses available but not scheduled
+        
+        // Ensure we don't have negative values
+        running = Math.Max(0, running);
+        idle = Math.Max(0, idle);
 
         // ╔═══════════════════════════════════════════════════════════════╗
         // ║  FLEET OVERVIEW (Primary Metrics for Dashboard)               ║
         // ╚═══════════════════════════════════════════════════════════════╝
         sb.AppendLine("# ═══ FLEET OVERVIEW ═══");
         Gauge(sb, "fleet_total_buses", "Total buses in fleet", buses.Count);
-        Gauge(sb, "fleet_active_buses", "Buses currently active", running);
+        Gauge(sb, "fleet_active_buses", "Buses currently in service", running);
+        Gauge(sb, "fleet_idle_buses", "Buses available but not scheduled", idle);
         Gauge(sb, "fleet_warning_buses", "Buses needing service soon", warning);
         Gauge(sb, "fleet_critical_buses", "Buses needing immediate service", critical);
         Gauge(sb, "fleet_maintenance_buses", "Buses in scheduled maintenance", maint);
         Gauge(sb, "fleet_down_buses", "Buses offline/out of service", down);
 
-        var fleetHealth = buses.Count > 0 ? (double)(running - critical) / buses.Count * 100 : 0;
+        var fleetHealth = buses.Count > 0 ? (double)(running + idle - critical) / buses.Count * 100 : 0;
         Gauge(sb, "fleet_health_score", "Fleet health score 0-100", Math.Max(0, fleetHealth));
         Gauge(sb, "fleet_utilization_rate", "Fleet utilization rate percent", buses.Count > 0 ? (double)running / buses.Count * 100 : 0);
+        
+        // Add schedule context
+        Gauge(sb, "current_hour", "Current hour of day (0-23)", currentHour);
+        Gauge(sb, "is_weekend", "Weekend mode (1=weekend, 0=weekday)", isWeekend ? 1 : 0);
+        Gauge(sb, "is_peak_hour", "Peak hour indicator (1=peak, 0=regular)", 
+            (currentHour >= 7 && currentHour <= 9 || currentHour >= 17 && currentHour <= 19) ? 1 : 0);
+        Gauge(sb, "target_active_rate", "Target active bus percentage", targetActiveRate * 100);
+
+        // ╔═══════════════════════════════════════════════════════════════╗
+        // ║  FLEET-FRIENDLY ALIASES FOR GRAFANA DASHBOARD                 ║
+        // ╚═══════════════════════════════════════════════════════════════╗
+        sb.AppendLine("\n# ═══ FLEET MANAGEMENT METRICS (Dashboard Aliases) ═══");
+        
+        // These will be calculated later in the monthly section
 
         // ╔═══════════════════════════════════════════════════════════════╗
         // ║  DAILY OPERATIONS METRICS                                      ║
@@ -91,6 +145,19 @@ public class MetricsController : ControllerBase
         Gauge(sb, "monthly_avg_efficiency", "Average fuel efficiency MPG", totalFuel > 0 ? totalDist / totalFuel : 0);
         Gauge(sb, "monthly_net_profit", "Net profit 30d USD",
             operations.Sum(o => o.Revenue.Amount) - operations.Sum(o => o.FuelCost.Amount));
+
+        // ╔═══════════════════════════════════════════════════════════════╗
+        // ║  DASHBOARD ALIASES (Fleet-Friendly Names)                     ║
+        // ╚═══════════════════════════════════════════════════════════════╝
+        sb.AppendLine("\n# ═══ DASHBOARD ALIASES ═══");
+        
+        // Cost & Financial Health aliases
+        var dashboardCostPerMile = totalDist > 0 ? (double)operations.Sum(o => o.FuelCost.Amount) / (double)totalDist : 0;
+        Gauge(sb, "fleet_cost_per_mile", "Fleet cost per mile USD", dashboardCostPerMile);
+        Gauge(sb, "fleet_avg_mpg", "Fleet average fuel efficiency MPG", totalFuel > 0 ? totalDist / totalFuel : 0);
+        Gauge(sb, "fleet_maintenance_cost_mtd", "Fleet maintenance cost month-to-date USD", operations.Sum(o => o.FuelCost.Amount) * 0.3m);
+        Gauge(sb, "fleet_fuel_cost_mtd", "Fleet fuel cost month-to-date USD", operations.Sum(o => o.FuelCost.Amount));
+        Gauge(sb, "fleet_eco_savings_mtd", "Fleet eco savings month-to-date USD", operations.Sum(o => o.Revenue.Amount) * 0.1m);
 
         // ╔═══════════════════════════════════════════════════════════════╗
         // ║  WEEKLY TRENDS (7-Day Historical Data)                        ║
@@ -153,54 +220,48 @@ public class MetricsController : ControllerBase
             var temp = GetEngineTemp(bus, busOps.Any(o => o.OperationDate.Date == today));
             var fuel = GetFuelLevel(bus, busOps);
             var milesToService = SERVICE_INTERVAL_MILES - (bus.CurrentMileage % SERVICE_INTERVAL_MILES);
+            var lastServiceDate = DateTime.UtcNow.AddMonths(-_rng.Next(1, SERVICE_INTERVAL_MONTHS)); // Simulate last service
+            var monthsSinceService = (DateTime.UtcNow - lastServiceDate).Days / 30.0;
+            var monthsToService = Math.Max(0, SERVICE_INTERVAL_MONTHS - monthsSinceService);
+            var daysToService = monthsToService * 30;
+            
+            // Engine hours (assume 8 hours/day operation)
+            var engineHours = bus.CurrentMileage * 0.5; // Rough estimate: 2 miles per engine hour
+            var hoursToService = SERVICE_INTERVAL_HOURS - (engineHours % SERVICE_INTERVAL_HOURS);
+            var daysToServiceByHours = hoursToService / 8; // 8 hours per day
             var busFuel = busOps.Sum(o => o.FuelConsumed);
             var busDist = busOps.Sum(o => o.DistanceTraveled);
             var mpg = busFuel > 0 ? busDist / busFuel : 0;
             var delayRate = busOps.Count > 0 ? (double)busOps.Count(o => o.IsDelayed()) / busOps.Count * 100 : 0;
 
             sb.AppendLine($"bus_health_score{{bus=\"{id}\"}} {health.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+            
+            // Health status as text (like game character status)
+            var healthStatus = health >= 80 ? "full_health" :
+                              health >= 50 ? "good_health" :
+                              health >= 20 ? "low_health" :
+                              health >= 1 ? "critical_health" : "no_health_left";
+            sb.AppendLine($"bus_health_status{{bus=\"{id}\",status=\"{healthStatus}\"}} {health.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine($"bus_engine_temp{{bus=\"{id}\"}} {temp}");
             sb.AppendLine($"bus_fuel_level{{bus=\"{id}\"}} {fuel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine($"bus_odometer{{bus=\"{id}\"}} {bus.CurrentMileage}");
             sb.AppendLine($"bus_miles_to_service{{bus=\"{id}\"}} {milesToService}");
+            sb.AppendLine($"bus_days_to_service_by_time{{bus=\"{id}\"}} {daysToService.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"bus_days_to_service_by_hours{{bus=\"{id}\"}} {daysToServiceByHours.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}");
+            
+            // Determine which comes first (most urgent)
+            var daysToServiceByMiles = milesToService / 150.0; // Assume 150 miles per day average
+            var nextServiceDays = Math.Min(Math.Min(daysToService, daysToServiceByHours), daysToServiceByMiles);
+            var serviceReason = nextServiceDays == daysToService ? "time" : 
+                               nextServiceDays == daysToServiceByHours ? "hours" : "miles";
+            
+            sb.AppendLine($"bus_next_service_days{{bus=\"{id}\",reason=\"{serviceReason}\"}} {nextServiceDays.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine($"bus_status{{bus=\"{id}\",status=\"{bus.Status}\"}} {(int)bus.Status}");
             sb.AppendLine($"bus_trips_30d{{bus=\"{id}\"}} {busOps.Count}");
             sb.AppendLine($"bus_passengers_30d{{bus=\"{id}\"}} {busOps.Sum(o => o.PassengerCount)}");
             sb.AppendLine($"bus_fuel_efficiency{{bus=\"{id}\"}} {mpg.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine($"bus_delay_rate{{bus=\"{id}\"}} {delayRate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine($"bus_revenue_30d{{bus=\"{id}\"}} {busOps.Sum(o => o.Revenue.Amount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
-        }
-
-        // ╔═══════════════════════════════════════════════════════════════╗
-        // ║  DRIVER PERFORMANCE METRICS                                    ║
-        // ╚═══════════════════════════════════════════════════════════════╝
-        sb.AppendLine("\n# ═══ DRIVER PERFORMANCE METRICS ═══");
-        sb.AppendLine("# HELP driver_trips_completed Trips completed by driver 30d");
-        sb.AppendLine("# TYPE driver_trips_completed gauge");
-        sb.AppendLine("# HELP driver_passengers_transported Passengers handled by driver 30d");
-        sb.AppendLine("# TYPE driver_passengers_transported gauge");
-        sb.AppendLine("# HELP driver_fuel_efficiency Driver fuel efficiency MPG");
-        sb.AppendLine("# TYPE driver_fuel_efficiency gauge");
-        sb.AppendLine("# HELP driver_delay_rate Driver delay rate percent");
-        sb.AppendLine("# TYPE driver_delay_rate gauge");
-        sb.AppendLine("# HELP driver_revenue_generated Revenue generated by driver 30d USD");
-        sb.AppendLine("# TYPE driver_revenue_generated gauge");
-
-        var driverGroups = operations.GroupBy(o => o.DriverName).OrderByDescending(g => g.Count()).Take(15);
-        foreach (var grp in driverGroups)
-        {
-            var name = grp.Key.Replace(" ", "_").Replace("\"", "");
-            var ops = grp.ToList();
-            var dFuel = ops.Sum(o => o.FuelConsumed);
-            var dDist = ops.Sum(o => o.DistanceTraveled);
-            var dMpg = dFuel > 0 ? dDist / dFuel : 0;
-            var dDelayRate = ops.Count > 0 ? (double)ops.Count(o => o.IsDelayed()) / ops.Count * 100 : 0;
-
-            sb.AppendLine($"driver_trips_completed{{driver=\"{name}\"}} {ops.Count}");
-            sb.AppendLine($"driver_passengers_transported{{driver=\"{name}\"}} {ops.Sum(o => o.PassengerCount)}");
-            sb.AppendLine($"driver_fuel_efficiency{{driver=\"{name}\"}} {dMpg.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
-            sb.AppendLine($"driver_delay_rate{{driver=\"{name}\"}} {dDelayRate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
-            sb.AppendLine($"driver_revenue_generated{{driver=\"{name}\"}} {ops.Sum(o => o.Revenue.Amount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
         }
 
         // ╔═══════════════════════════════════════════════════════════════╗
@@ -228,11 +289,11 @@ public class MetricsController : ControllerBase
         
         // Operations & Fleet Status
         Gauge(sb, "fleet_total_buses", "Total buses in fleet", buses.Count);
-        Gauge(sb, "fleet_active_buses", "Active buses", running);
+        Gauge(sb, "fleet_active_buses", "Active buses in service", running);
         Gauge(sb, "fleet_in_maintenance", "Buses in maintenance", maint);
         Gauge(sb, "fleet_out_of_service", "Buses out of service", down);
         Gauge(sb, "fleet_utilization_rate", "Fleet utilization rate percent", buses.Count > 0 ? (double)running / buses.Count * 100 : 0);
-        Gauge(sb, "fleet_availability", "Fleet availability percent", buses.Count > 0 ? (double)(running) / buses.Count * 100 : 0);
+        Gauge(sb, "fleet_availability", "Fleet availability percent", buses.Count > 0 ? (double)(running + idle) / buses.Count * 100 : 0);
         Gauge(sb, "fleet_downtime_pct", "Fleet downtime percent", buses.Count > 0 ? (double)(down + maint) / buses.Count * 100 : 0);
         
         // Today's Operations
@@ -278,29 +339,10 @@ public class MetricsController : ControllerBase
         sb.AppendLine("# HELP driver_tier_count Driver count by performance tier");
         sb.AppendLine("# TYPE driver_tier_count gauge");
         
-        var topDrivers = driverGroups.Take(10).ToList();
-        foreach (var grp in topDrivers)
-        {
-            var name = grp.Key.Replace(" ", "_").Replace("\"", "");
-            var ops = grp.ToList();
-            var driverScore = Math.Max(50, 100 - _rng.Next(0, 40));
-            var harshPer100km = Math.Max(0.5, _rng.NextDouble() * 6);
-            
-            sb.AppendLine($"driver_overall_score{{driver=\"{name}\"}} {driverScore}");
-            sb.AppendLine($"driver_harsh_per_100km{{driver=\"{name}\"}} {harshPer100km.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
-        }
-        
-        // Driver tier distribution - use actual driver scores, not operation counts
-        var driverScores = new List<int>();
-        foreach (var grp in topDrivers)
-        {
-            var driverScore = Math.Max(50, 100 - _rng.Next(0, 40)); // Same logic as above
-            driverScores.Add(driverScore);
-        }
-        
-        var excellentDrivers = driverScores.Count(score => score >= 80);
-        var goodDrivers = driverScores.Count(score => score >= 60 && score < 80);
-        var needsTrainingDrivers = driverScores.Count(score => score < 60);
+        // Driver tier distribution - use mock data for demo
+        var excellentDrivers = _rng.Next(2, 5);
+        var goodDrivers = _rng.Next(3, 6);
+        var needsTrainingDrivers = _rng.Next(0, 3);
         
         sb.AppendLine($"driver_tier_count{{tier=\"excellent\"}} {excellentDrivers}");
         sb.AppendLine($"driver_tier_count{{tier=\"good\"}} {goodDrivers}");
@@ -365,6 +407,119 @@ public class MetricsController : ControllerBase
             sb.AppendLine($"route_avg_passenger_load{{route=\"{rNum}\"}} {avgLoad.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
         }
 
+        // ╔═══════════════════════════════════════════════════════════════╗
+        // ║  DRIVER HEALTH & FATIGUE MONITORING (Like Bus Health System)  ║
+        // ╚═══════════════════════════════════════════════════════════════╝
+        sb.AppendLine("\n# ═══ DRIVER HEALTH & FATIGUE MONITORING ═══");
+        sb.AppendLine("# HELP driver_fatigue_level Driver fatigue level 0-100 (100=rested, 0=exhausted)");
+        sb.AppendLine("# TYPE driver_fatigue_level gauge");
+        sb.AppendLine("# HELP driver_hours_worked_today Hours worked today");
+        sb.AppendLine("# TYPE driver_hours_worked_today gauge");
+        sb.AppendLine("# HELP driver_hours_until_mandatory_rest Hours until mandatory rest required");
+        sb.AppendLine("# TYPE driver_hours_until_mandatory_rest gauge");
+        sb.AppendLine("# HELP driver_days_since_rest Days since last full rest day");
+        sb.AppendLine("# TYPE driver_days_since_rest gauge");
+        sb.AppendLine("# HELP driver_health_status Driver health status (like bus health)");
+        sb.AppendLine("# TYPE driver_health_status gauge");
+
+        // Debug: Add driver count
+        sb.AppendLine($"# DEBUG: Found {drivers.Count} drivers in database");
+
+        // Generate driver fatigue data from actual database drivers
+        foreach (var driver in drivers)
+        {
+            var driverName = driver.FullName.Replace(" ", "_").Replace("\"", "");
+            
+            // Get today's shift data
+            var todayShift = driver.Shifts.FirstOrDefault(s => s.ShiftDate.Date == today);
+            var hoursWorkedToday = todayShift?.HoursWorked ?? 0;
+            
+            // Calculate days since last rest
+            var daysSinceRest = (today - driver.LastRestDay).Days;
+            var hoursUntilMandatoryRest = Math.Max(0, 14 - hoursWorkedToday);
+            
+            // Use the driver's actual fatigue level
+            var driverFatigue = driver.CurrentFatigueLevel;
+            
+            var healthStatus = driverFatigue >= 80 ? "well_rested" :
+                             driverFatigue >= 60 ? "good_condition" :
+                             driverFatigue >= 30 ? "getting_tired" :
+                             driverFatigue >= 10 ? "needs_rest_soon" : "exhausted_mandatory_rest";
+            
+            sb.AppendLine($"driver_fatigue_level{{driver=\"{driverName}\"}} {driverFatigue.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_hours_worked_today{{driver=\"{driverName}\"}} {hoursWorkedToday.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_hours_until_mandatory_rest{{driver=\"{driverName}\"}} {hoursUntilMandatoryRest.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_days_since_rest{{driver=\"{driverName}\"}} {daysSinceRest}");
+            sb.AppendLine($"driver_health_status{{driver=\"{driverName}\",status=\"{healthStatus}\"}} {driverFatigue.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+
+        // ╔═══════════════════════════════════════════════════════════════╗
+        // ║  MANDATORY COMPLIANCE MONITORING                               ║
+        // ╚═══════════════════════════════════════════════════════════════╝
+        sb.AppendLine("\n# ═══ MANDATORY COMPLIANCE MONITORING ═══");
+        
+        // Bus Service Compliance (mandatory maintenance)
+        var busesOverdueService = buses.Count(b => GetHealthPercent(b) < 10);
+        var busesDueSoon = buses.Count(b => GetHealthPercent(b) < 30 && GetHealthPercent(b) >= 10);
+        Gauge(sb, "fleet_buses_overdue_service", "Buses overdue for mandatory service", busesOverdueService);
+        Gauge(sb, "fleet_buses_due_service_soon", "Buses due for service within 7 days", busesDueSoon);
+        
+        // Driver Rest Compliance (mandatory rest periods) - using mock data for demo
+        var driversNeedingRest = _rng.Next(1, 4);
+        var driversOvertime = _rng.Next(0, 2);
+        Gauge(sb, "fleet_drivers_needing_rest", "Drivers needing mandatory rest", driversNeedingRest);
+        Gauge(sb, "fleet_drivers_overtime_violation", "Drivers in overtime violation", driversOvertime);
+        
+        // Overall Compliance Score
+        var totalViolations = busesOverdueService + driversNeedingRest + driversOvertime;
+        var complianceScore = Math.Max(70, 100 - (totalViolations * 10));
+        Gauge(sb, "fleet_compliance_score", "Overall fleet compliance score percentage", complianceScore);
+        
+        // Safety Risk Level (based on fatigue and maintenance)
+        var safetyRisk = totalViolations == 0 ? "low" :
+                        totalViolations <= 2 ? "medium" :
+                        totalViolations <= 4 ? "high" : "critical";
+        sb.AppendLine($"# HELP fleet_safety_risk_level Fleet safety risk level");
+        sb.AppendLine($"# TYPE fleet_safety_risk_level gauge");
+        sb.AppendLine($"fleet_safety_risk_level{{level=\"{safetyRisk}\"}} {totalViolations}");
+
+        // ╔═══════════════════════════════════════════════════════════════╗
+        // ║  DRIVER PERFORMANCE METRICS                                    ║
+        // ╚═══════════════════════════════════════════════════════════════╝
+        sb.AppendLine("\n# ═══ DRIVER PERFORMANCE METRICS ═══");
+        sb.AppendLine("# HELP driver_trips_completed Trips completed by driver 30d");
+        sb.AppendLine("# TYPE driver_trips_completed gauge");
+        sb.AppendLine("# HELP driver_passengers_transported Passengers handled by driver 30d");
+        sb.AppendLine("# TYPE driver_passengers_transported gauge");
+        sb.AppendLine("# HELP driver_fuel_efficiency Driver fuel efficiency MPG");
+        sb.AppendLine("# TYPE driver_fuel_efficiency gauge");
+        sb.AppendLine("# HELP driver_delay_rate Driver delay rate percent");
+        sb.AppendLine("# TYPE driver_delay_rate gauge");
+        sb.AppendLine("# HELP driver_revenue_generated Revenue generated by driver 30d USD");
+        sb.AppendLine("# TYPE driver_revenue_generated gauge");
+
+        // Generate actual driver performance data from operations
+        var driverGroups = operations.GroupBy(o => o.DriverName).OrderByDescending(g => g.Count()).Take(15);
+        foreach (var grp in driverGroups)
+        {
+            var name = grp.Key.Replace(" ", "_").Replace("\"", "");
+            var ops = grp.ToList();
+            var driverScore = Math.Max(50, 100 - _rng.Next(0, 40));
+            var harshPer100km = Math.Max(0.5, _rng.NextDouble() * 6);
+            var driverFuel = ops.Sum(o => o.FuelConsumed);
+            var driverDist = ops.Sum(o => o.DistanceTraveled);
+            var mpg = driverFuel > 0 ? driverDist / driverFuel : 0;
+            var delayRate = ops.Count > 0 ? (double)ops.Count(o => o.IsDelayed()) / ops.Count * 100 : 0;
+            
+            sb.AppendLine($"driver_trips_completed{{driver=\"{name}\"}} {ops.Count}");
+            sb.AppendLine($"driver_passengers_transported{{driver=\"{name}\"}} {ops.Sum(o => o.PassengerCount)}");
+            sb.AppendLine($"driver_fuel_efficiency{{driver=\"{name}\"}} {mpg.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_delay_rate{{driver=\"{name}\"}} {delayRate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_revenue_generated{{driver=\"{name}\"}} {ops.Sum(o => o.Revenue.Amount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine($"driver_overall_score{{driver=\"{name}\"}} {driverScore}");
+            sb.AppendLine($"driver_harsh_per_100km{{driver=\"{name}\"}} {harshPer100km.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+
         return Content(sb.ToString(), "text/plain; charset=utf-8");
     }
 
@@ -372,9 +527,31 @@ public class MetricsController : ControllerBase
 
     private static double GetHealthPercent(Bus bus)
     {
-        // Health = 100% right after service, decreases as mileage increases
+        // Gaming-style health system: Like a character's blood/HP
+        // 100% = Just serviced (full blood, ready to fight)
+        // 50%  = Half health (still good to go)
+        // 10%  = Critical health (red alert, needs healing)
+        // 0%   = No blood left to run (will break down!)
+        
+        // Calculate health based on mileage (like XP degrading health)
         var milesInCycle = bus.CurrentMileage % SERVICE_INTERVAL_MILES;
-        return Math.Max(0, 100.0 - (milesInCycle * 100.0 / SERVICE_INTERVAL_MILES));
+        var mileageHealth = Math.Max(0, 100.0 - (milesInCycle * 100.0 / SERVICE_INTERVAL_MILES));
+        
+        // Calculate health based on time since service (like time-based health decay)
+        var daysSinceService = _rng.Next(30, 180); // 1-6 months since last service
+        var timeHealth = Math.Max(0, 100.0 - (daysSinceService * 100.0 / (SERVICE_INTERVAL_MONTHS * 30)));
+        
+        // Use the WORST health score (most critical need) - like lowest HP determines danger
+        var finalHealth = Math.Min(mileageHealth, timeHealth);
+        
+        // Health Status Levels (like game character health):
+        // 80-100% = 💚 Full Health (just serviced, ready for battle)
+        // 50-79%  = 💛 Good Health (still strong)
+        // 20-49%  = 🧡 Low Health (needs attention soon)
+        // 1-19%   = ❤️ Critical Health (service NOW or breakdown risk)
+        // 0%      = 💀 No Health Left (emergency - bus will "die")
+        
+        return finalHealth;
     }
 
     private static int GetEngineTemp(Bus bus, bool isRunning)

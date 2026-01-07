@@ -560,9 +560,56 @@ export default function DashboardPage() {
           <MaintenanceAlerts alerts={maintenanceAlerts} />
         </div>
 
-        {/* Savings Gauge - 3 cols */}
+        {/* Quick Actions - 3 cols */}
         <div className="col-span-3">
-          <SavingsGauge roiSummary={roiSummary} />
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3 className="card-title">Quick Actions</h3>
+                <p className="card-description">Common fleet operations</p>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="grid grid-cols-1 gap-3">
+                <button className="flex items-center gap-3 p-3 text-left hover:bg-[var(--background-secondary)] rounded-lg transition-colors">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Activity size={16} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Fleet Map</div>
+                    <div className="text-xs text-[var(--foreground-muted)]">Live GPS tracking</div>
+                  </div>
+                </button>
+                <button className="flex items-center gap-3 p-3 text-left hover:bg-[var(--background-secondary)] rounded-lg transition-colors">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <DollarSign size={16} className="text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Cost Analysis</div>
+                    <div className="text-xs text-[var(--foreground-muted)]">View insights</div>
+                  </div>
+                </button>
+                <button className="flex items-center gap-3 p-3 text-left hover:bg-[var(--background-secondary)] rounded-lg transition-colors">
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Users size={16} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Driver Reports</div>
+                    <div className="text-xs text-[var(--foreground-muted)]">Performance data</div>
+                  </div>
+                </button>
+                <button className="flex items-center gap-3 p-3 text-left hover:bg-[var(--background-secondary)] rounded-lg transition-colors">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Clock size={16} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Schedule</div>
+                    <div className="text-xs text-[var(--foreground-muted)]">Maintenance queue</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

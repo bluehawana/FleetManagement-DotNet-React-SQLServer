@@ -1,24 +1,23 @@
 services:
-  # SQL Server Database (ARM64 compatible)
-  sqlserver:
-    image: mcr.microsoft.com/azure-sql-edge:latest
-    container_name: fleet-sqlserver
-    platform: linux/arm64
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: fleet-postgres
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL_PID=Express
+      - POSTGRES_DB=FleetManagement
+      - POSTGRES_USER=fleetuser
+      - POSTGRES_PASSWORD=FleetPass123!
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - sqlserver-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - fleet-network
     healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" || exit 1
+      test: ["CMD-SHELL", "pg_isready -U fleetuser -d FleetManagement"]
       interval: 10s
-      timeout: 3s
-      retries: 10
+      timeout: 5s
+      retries: 5
       start_period: 10s
 
   # .NET Backend API
@@ -29,12 +28,12 @@ services:
     container_name: fleet-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=FleetManagement;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;Encrypt=False;
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=FleetManagement;Username=fleetuser;Password=FleetPass123!;
       - ASPNETCORE_URLS=http://+:5000
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
     networks:
       - fleet-network
@@ -57,7 +56,7 @@ services:
       dockerfile: Dockerfile
     container_name: fleet-frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      - NEXT_PUBLIC_API_URL=http://localhost:5001/api
       - NEXT_PUBLIC_GRAFANA_URL=http://localhost:3001
     ports:
       - "3000:3000"
@@ -131,7 +130,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  sqlserver-data:
+  postgres-data:
   grafana-data:
   prometheus-data:
 
