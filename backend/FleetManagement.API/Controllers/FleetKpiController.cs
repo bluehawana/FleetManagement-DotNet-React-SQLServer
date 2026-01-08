@@ -276,21 +276,8 @@ public class FleetKpiController : ControllerBase
         sb.AppendLine($"driver_tier_count{{tier=\"good\"}} {kpis.GoodDrivers}");
         sb.AppendLine($"driver_tier_count{{tier=\"needs_training\"}} {kpis.NeedsTrainingDrivers}");
 
-        // DRIVER SCORECARDS
-        sb.AppendLine("\n# === DRIVER SCORECARDS ===");
-        sb.AppendLine("# HELP driver_overall_score Driver performance score 0-100");
-        sb.AppendLine("# TYPE driver_overall_score gauge");
-        sb.AppendLine("# HELP driver_mpg Driver fuel efficiency MPG");
-        sb.AppendLine("# TYPE driver_mpg gauge");
-        sb.AppendLine("# HELP driver_harsh_per_100km Driver harsh events per 100km");
-        sb.AppendLine("# TYPE driver_harsh_per_100km gauge");
-        foreach (var driver in kpis.DriverScores.Take(10))
-        {
-            var name = driver.DriverName.Replace(" ", "_").Replace("\"", "");
-            sb.AppendLine($"driver_overall_score{{driver=\"{name}\"}} {driver.OverallScore}");
-            sb.AppendLine($"driver_mpg{{driver=\"{name}\"}} {driver.FuelEfficiencyMpg}");
-            sb.AppendLine($"driver_harsh_per_100km{{driver=\"{name}\"}} {driver.HarshEventsPer100km}");
-        }
+        // NOTE: Individual driver scorecards are provided by MetricsController (/metrics endpoint)
+        // to avoid duplicate metrics in Prometheus. This controller focuses on fleet-level KPIs.
 
         // WEEKLY TRENDS
         sb.AppendLine("\n# === WEEKLY TRENDS ===");
