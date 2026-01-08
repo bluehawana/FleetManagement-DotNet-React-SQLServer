@@ -1,0 +1,145 @@
+════════════════════════════════════════════════════════════════
+   🚀 Fleet Management System has been deployed!
+════════════════════════════════════════════════════════════════
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Environment: {{ .Values.global.environment }}
+
+────────────────────────────────────────────────────────────────
+📊 DEPLOYED COMPONENTS
+────────────────────────────────────────────────────────────────
+
+{{- if .Values.backend.enabled }}
+✅ Backend API ({{ .Values.backend.replicaCount }} replicas)
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+✅ PostgreSQL Database
+{{- end }}
+{{- if .Values.prometheus.enabled }}
+✅ Prometheus Monitoring
+{{- end }}
+{{- if .Values.grafana.enabled }}
+✅ Grafana Dashboards
+{{- end }}
+
+────────────────────────────────────────────────────────────────
+🌐 ACCESS ENDPOINTS
+────────────────────────────────────────────────────────────────
+
+{{- if .Values.backend.enabled }}
+Backend API:
+{{- if .Values.backend.ingress.enabled }}
+  {{- range .Values.backend.ingress.hosts }}
+  • https://{{ .host }}
+  {{- end }}
+{{- else }}
+  • Get the LoadBalancer IP:
+    kubectl get svc {{ .Values.backend.name }} -n {{ .Values.namespaces.app }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.grafana.enabled }}
+
+Grafana:
+{{- if .Values.grafana.ingress.enabled }}
+  {{- range .Values.grafana.ingress.hosts }}
+  • https://{{ .host }}
+  {{- end }}
+  • Username: {{ .Values.grafana.auth.adminUser }}
+  • Password: {{ .Values.grafana.auth.adminPassword }}
+{{- else }}
+  • Port-forward:
+    kubectl port-forward -n {{ .Values.namespaces.monitoring }} svc/{{ .Values.grafana.name }} 3000:3000
+  • Access: http://localhost:3000
+  • Username: {{ .Values.grafana.auth.adminUser }}
+  • Password: {{ .Values.grafana.auth.adminPassword }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.prometheus.enabled }}
+
+Prometheus:
+{{- if .Values.prometheus.ingress.enabled }}
+  {{- range .Values.prometheus.ingress.hosts }}
+  • https://{{ .host }}
+  {{- end }}
+{{- else }}
+  • Port-forward:
+    kubectl port-forward -n {{ .Values.namespaces.monitoring }} svc/{{ .Values.prometheus.name }} 9090:9090
+  • Access: http://localhost:9090
+{{- end }}
+{{- end }}
+
+────────────────────────────────────────────────────────────────
+📋 USEFUL COMMANDS
+────────────────────────────────────────────────────────────────
+
+View backend pods:
+  kubectl get pods -n {{ .Values.namespaces.app }} -l app={{ .Values.backend.name }}
+
+View backend logs:
+  kubectl logs -f -n {{ .Values.namespaces.app }} -l app={{ .Values.backend.name }}
+
+View database pods:
+  kubectl get pods -n {{ .Values.namespaces.data }} -l app={{ .Values.postgresql.name }}
+
+Check HPA status:
+  kubectl get hpa -n {{ .Values.namespaces.app }}
+
+Rollout status:
+  kubectl rollout status deployment/{{ .Values.backend.name }} -n {{ .Values.namespaces.app }}
+
+Restart backend:
+  kubectl rollout restart deployment/{{ .Values.backend.name }} -n {{ .Values.namespaces.app }}
+
+────────────────────────────────────────────────────────────────
+⚙️  UPGRADE & MANAGEMENT
+────────────────────────────────────────────────────────────────
+
+Upgrade this release:
+  helm upgrade {{ .Release.Name }} fleet-management \
+    -f values-{{ .Values.global.environment }}.yaml \
+    -n {{ .Release.Namespace }}
+
+View release history:
+  helm history {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Rollback to previous version:
+  helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Uninstall this release:
+  helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+────────────────────────────────────────────────────────────────
+⚠️  SECURITY REMINDERS
+────────────────────────────────────────────────────────────────
+
+{{- if eq .Values.global.environment "production" }}
+🔒 IMPORTANT: For production deployment:
+
+1. Change default passwords:
+   - PostgreSQL: {{ .Values.postgresql.auth.username }}
+   - Grafana: {{ .Values.grafana.auth.adminUser }}
+
+2. Configure TLS certificates properly
+
+3. Enable network policies
+
+4. Set up regular backups
+
+5. Configure monitoring alerts
+
+6. Review security contexts and RBAC
+
+{{- else }}
+ℹ️  This is a {{ .Values.global.environment }} environment.
+   Remember to use stronger security settings in production!
+{{- end }}
+
+────────────────────────────────────────────────────────────────
+
+For more information, visit:
+  https://github.com/yourusername/fleet-management
+
+Happy managing! 🚌

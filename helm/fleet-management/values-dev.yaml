@@ -1,0 +1,88 @@
+# Development environment overrides
+global:
+  environment: development
+  domain: dev.yourdomain.com
+
+backend:
+  replicaCount: 1
+  image:
+    tag: "develop"
+
+  ingress:
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"  # Use staging for dev
+    hosts:
+      - host: api.dev.fleet.yourdomain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: fleet-backend-dev-tls
+        hosts:
+          - api.dev.fleet.yourdomain.com
+
+  env:
+    ASPNETCORE_ENVIRONMENT: Development
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+  autoscaling:
+    enabled: false
+
+postgresql:
+  replicas: 1
+
+  persistence:
+    size: 10Gi
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+prometheus:
+  persistence:
+    size: 20Gi
+
+  retention:
+    time: 7d
+    size: 20GB
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+grafana:
+  persistence:
+    size: 5Gi
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+
+certManager:
+  issuer:
+    production:
+      name: letsencrypt-staging  # Use staging for dev
+
+namespaces:
+  app: fleet-dev
+  data: fleet-dev-data
+  monitoring: fleet-dev-monitoring

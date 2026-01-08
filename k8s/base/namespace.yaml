@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fleet-app
+  labels:
+    name: fleet-app
+    environment: production
+    team: platform
+    # Pod Security Standards
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fleet-data
+  labels:
+    name: fleet-data
+    environment: production
+    team: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fleet-monitoring
+  labels:
+    name: fleet-monitoring
+    environment: production
+    team: observability

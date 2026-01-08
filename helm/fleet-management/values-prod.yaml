@@ -1,0 +1,151 @@
+# Production environment overrides
+global:
+  environment: production
+  domain: yourdomain.com
+
+backend:
+  replicaCount: 5  # Higher replica count for production
+
+  image:
+    tag: "latest"
+    pullPolicy: IfNotPresent  # Use cached images in production
+
+  ingress:
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/limit-rps: "200"  # Higher rate limit
+      nginx.ingress.kubernetes.io/limit-connections: "100"
+    hosts:
+      - host: api.fleet.yourdomain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: fleet-backend-tls
+        hosts:
+          - api.fleet.yourdomain.com
+
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60  # Lower threshold for production
+    targetMemoryUtilizationPercentage: 70
+
+  # Production pod distribution for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - fleet-backend
+            topologyKey: kubernetes.io/hostname
+
+postgresql:
+  replicas: 1  # For true HA, use 3 with Patroni/Stolon
+
+  persistence:
+    enabled: true
+    size: 100Gi  # Larger storage for production
+    storageClass: fast-ssd  # Use fast storage
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  config:
+    maxConnections: 200  # Higher connection limit
+    sharedBuffers: "512MB"
+    effectiveCacheSize: "2GB"
+    maintenanceWorkMem: "128MB"
+
+  # High availability configuration
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - postgres
+          topologyKey: kubernetes.io/hostname
+
+prometheus:
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: fast-ssd
+
+  retention:
+    time: 90d  # Longer retention for production
+    size: 100GB
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  scrapeInterval: 30s  # Less frequent scraping to reduce load
+
+grafana:
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: fast-ssd
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  # Enable OAuth for production (example)
+  # env:
+  #   GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+  #   GF_AUTH_GENERIC_OAUTH_NAME: "OAuth"
+  #   GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+  #   GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "your-client-id"
+  #   GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
+  #   GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://oauth.yourdomain.com/authorize"
+  #   GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://oauth.yourdomain.com/token"
+
+certManager:
+  email: devops@yourdomain.com
+  issuer:
+    production:
+      name: letsencrypt-prod
+
+namespaces:
+  app: fleet-prod
+  data: fleet-prod-data
+  monitoring: fleet-prod-monitoring
+
+# Production-specific RBAC
+rbac:
+  create: true
