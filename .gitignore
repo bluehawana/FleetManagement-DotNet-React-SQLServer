@@ -94,6 +94,11 @@ Thumbs.db
 logs/
 *.log
 
+# Test reports
+reports/
+*.report.html
+*.report.json
+
 # Temporary files
 tmp/
 temp/
