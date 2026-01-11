@@ -16,7 +16,11 @@ public class DriverShift : Entity
     public DateTime CreatedAt { get; private set; }
 
     // EF Core constructor
-    private DriverShift() { }
+    private DriverShift()
+    {
+        DriverShiftId = new DriverShiftId(Guid.Empty);
+        DriverId = new DriverId(Guid.Empty);
+    }
 
     public DriverShift(
         DriverShiftId driverShiftId,

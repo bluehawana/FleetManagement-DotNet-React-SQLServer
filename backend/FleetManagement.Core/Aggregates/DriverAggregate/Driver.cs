@@ -22,8 +22,9 @@ public class Driver : AggregateRoot
     public IReadOnlyCollection<DriverShift> Shifts => _shifts.AsReadOnly();
 
     // EF Core constructor
-    private Driver() 
+    private Driver()
     {
+        DriverId = new DriverId(Guid.Empty);
         DriverNumber = string.Empty;
         FirstName = string.Empty;
         LastName = string.Empty;
